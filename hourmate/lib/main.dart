@@ -11,6 +11,8 @@ import 'features/home/domain/usecases/get_work_entries_usecase.dart';
 import 'features/home/domain/usecases/get_weekly_summary_usecase.dart';
 import 'features/home/presentation/blocs/work_tracking_bloc.dart';
 import 'features/home/presentation/screens/home_screen.dart';
+import 'features/work_log/presentation/screens/work_log_screen.dart';
+import 'features/weekly_summary/presentation/screens/summary_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,8 +67,90 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        home: const HomeScreen(),
+        home: const MainScaffold(),
         debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
+
+class MainScaffold extends StatefulWidget {
+  const MainScaffold({super.key});
+
+  @override
+  State<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends State<MainScaffold> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    HomeScreen(showBackButton: false),
+    WorkLogScreen(showBackButton: false),
+    SummaryScreen(), // Use new SummaryScreen as main tab
+    Container(), // Placeholder for settings
+  ];
+
+  void _onTabTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(left: 24, right: 24, bottom: 18),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.bottomNavBg,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.13),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: AppTheme.bottomNavSelected,
+              unselectedItemColor: AppTheme.bottomNavUnselected.withOpacity(
+                0.7,
+              ),
+              selectedFontSize: 13,
+              unselectedFontSize: 13,
+              iconSize: 28,
+              elevation: 0,
+              currentIndex: _selectedIndex,
+              onTap: _onTabTapped,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_rounded),
+                  label: 'Log',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.bar_chart_rounded),
+                  label: 'Summary',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.settings_rounded),
+                  label: 'Settings',
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

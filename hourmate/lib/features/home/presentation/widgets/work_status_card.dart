@@ -46,15 +46,12 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: AppTheme.backgroundColor.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.goodRatingColor.withOpacity(0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(
+          color: AppTheme.disabledTextColor.withValues(alpha: 0.18),
+          width: 1.5,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
@@ -75,10 +72,10 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
                 Text(
                   'Currently Working',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.goodRatingColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                    color: AppTheme.goodRatingColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
               ],
             ),
@@ -87,10 +84,10 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
             Text(
               widget.workEntry.taskDescription,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryTextColor,
-                    fontSize: 20,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryTextColor,
+                fontSize: 20,
+              ),
             ),
             const SizedBox(height: 10),
             // Duration
@@ -105,17 +102,17 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
                 Text(
                   'Duration: $formattedDuration',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.secondaryTextColor,
-                        fontSize: 15,
-                      ),
+                    color: AppTheme.secondaryTextColor,
+                    fontSize: 15,
+                  ),
                 ),
                 const Spacer(),
                 Text(
                   'Started at ${DateFormat(AppConstants.timeFormat).format(widget.workEntry.startTime)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.disabledTextColor,
-                        fontSize: 13,
-                      ),
+                    color: AppTheme.disabledTextColor,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
