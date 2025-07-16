@@ -15,10 +15,9 @@ class HomeTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final tabs = ['Today', 'Plans', 'Daily'];
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.tabBarBg,
+        color: AppTheme.tabBarBg.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

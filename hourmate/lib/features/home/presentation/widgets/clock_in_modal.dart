@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../work_log/presentation/widgets/rounded_gradient_button.dart';
 import '../blocs/work_tracking_bloc.dart';
 
 class ClockInModal extends StatefulWidget {
@@ -27,104 +28,187 @@ class _ClockInModalState extends State<ClockInModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppConstants.cardBorderRadius),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF2a2a2a), Colors.black],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.neonYellowGreen.withValues(alpha: 0.25),
+            blurRadius: 40,
+            spreadRadius: 2,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.7),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: AppTheme.disabledTextColor.withValues(alpha: 0.18),
+          width: 1.5,
         ),
       ),
-      child: Padding(
+      child: SingleChildScrollView(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
+          top: 0,
         ),
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.disabledTextColor,
-                  borderRadius: BorderRadius.circular(2),
+              // Neon handle bar
+              Padding(
+                padding: const EdgeInsets.only(top: 15),
+                child: Container(
+                  width: 54,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppTheme.neonYellowGreen,
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.neonYellowGreen.withOpacity(0.45),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-
               Padding(
-                padding: const EdgeInsets.all(AppConstants.largePadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Start Work Session',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Task Description
-                    TextFormField(
-                      controller: _taskDescriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'What are you working on?',
-                        hintText:
-                            'e.g., Client meeting, Code review, Documentation',
-                        prefixIcon: Icon(Icons.work),
-                      ),
-                      maxLength: AppConstants.maxTaskDescriptionLength,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a task description';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Task Rating
-                    Text(
-                      'How do you feel about this task?',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRatingSelector(),
-                    const SizedBox(height: 20),
-
-                    // Optional Comment
-                    TextFormField(
-                      controller: _taskCommentController,
-                      decoration: const InputDecoration(
-                        labelText: 'Optional Comment',
-                        hintText: 'Any notes, roadblocks, or mood...',
-                        prefixIcon: Icon(Icons.comment),
-                      ),
-                      maxLines: 3,
-                      maxLength: AppConstants.maxCommentLength,
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
-                          ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 22,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          'Start Work Session',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                         ),
-                        const SizedBox(width: AppConstants.defaultPadding),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _clockIn,
-                            child: const Text('Start Working'),
-                          ),
+                      ),
+                      const SizedBox(height: 22),
+                      // Task Description
+                      TextFormField(
+                        controller: _taskDescriptionController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
-                  ],
+                        decoration: InputDecoration(
+                          labelText: 'What are you working on?',
+                          hintText:
+                              'e.g., Client meeting, Code review, Documentation',
+                          prefixIcon: const Icon(
+                            Icons.work,
+                            color: AppTheme.secondaryTextColor,
+                          ),
+                          labelStyle: const TextStyle(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: AppTheme.disabledTextColor,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: AppTheme.neonYellowGreen,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFF181818),
+                        ),
+                        maxLength: AppConstants.maxTaskDescriptionLength,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a task description';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      // Task Rating
+                      Text(
+                        'How do you feel about this task?',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.primaryTextColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildRatingSelector(),
+                      const SizedBox(height: 18),
+                      // Optional Comment
+                      TextFormField(
+                        controller: _taskCommentController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Optional Comment',
+                          hintText: 'Any notes, roadblocks, or mood...',
+                          prefixIcon: const Icon(
+                            Icons.comment,
+                            color: AppTheme.secondaryTextColor,
+                          ),
+                          labelStyle: const TextStyle(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: AppTheme.secondaryTextColor.withOpacity(
+                                0.2,
+                              ),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: AppTheme.neonYellowGreen,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFF181818),
+                        ),
+                        maxLines: 3,
+                        maxLength: AppConstants.maxCommentLength,
+                      ),
+                      const SizedBox(height: 28),
+                      // Action Buttons
+                      RoundedGradientButton(
+                        text: 'Start Session',
+                        onPressed: _clockIn,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

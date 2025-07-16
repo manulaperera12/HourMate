@@ -13,9 +13,11 @@ import '../widgets/home_tab_bar.dart';
 import '../widgets/horizontal_progress_list.dart';
 import '../widgets/today_progress_circle.dart';
 import '../widgets/stats_row.dart';
+import '../../../work_log/presentation/screens/work_log_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool showBackButton;
+  const HomeScreen({super.key, this.showBackButton = false});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -53,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             colors: [
               // AppTheme.headerGradientStart, // Neon yellow-green
-              AppTheme.headerGradientStart.withOpacity(0.8),
+              AppTheme.headerGradientStart.withValues(alpha: 0.8),
               AppTheme.backgroundColor, // Dark/black
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,
@@ -93,12 +95,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         HomeHeader(
                           dateRange: 'Jul 15-21',
                           onSettingsTap: _navigateToSettings,
+                          showBackButton: widget.showBackButton,
+                          onBack: () => Navigator.of(context).pop(),
                         ),
-                        HomeTabBar(
-                          selectedIndex: _selectedTab,
-                          onTabSelected: (index) {
-                            setState(() => _selectedTab = index);
-                          },
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: HomeTabBar(
+                            selectedIndex: _selectedTab,
+                            onTabSelected: (index) {
+                              setState(() => _selectedTab = index);
+                            },
+                          ),
                         ),
                         const SizedBox(height: 30),
                         HorizontalProgressList(weekProgress: _mockWeekProgress),
@@ -197,71 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildHomeContent(WorkTrackingLoaded state) {
-    return CustomScrollView(
-      slivers: [
-        // App Bar
-        SliverAppBar(
-          expandedHeight: 120,
-          floating: false,
-          pinned: true,
-          backgroundColor: AppTheme.surfaceColor,
-          elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(
-            title: Text(
-              'HourMate',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            centerTitle: true,
-          ),
-        ),
-
-        // Main Content
-        SliverPadding(
-          padding: const EdgeInsets.all(AppConstants.defaultPadding),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 20),
-
-              // Clock In/Out Button
-              ClockInOutButton(
-                isClockInEnabled: state.isClockInEnabled,
-                activeWorkEntry: state.activeWorkEntry,
-                onClockIn: _showClockInModal,
-                onClockOut: _showClockOutModal,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Work Status Card
-              if (state.activeWorkEntry != null)
-                WorkStatusCard(workEntry: state.activeWorkEntry!),
-
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              QuickActions(
-                onViewLog: () => _navigateToWorkLog(),
-                onViewSummary: () => _navigateToWeeklySummary(),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Today's Work Summary
-              _buildTodaySummary(state.workEntries),
-
-              const SizedBox(height: 100), // Bottom padding for navigation
-            ]),
-          ),
-        ),
-      ],
     );
   }
 
@@ -398,7 +340,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToWorkLog() {
-    // TODO: Navigate to work log page
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const WorkLogScreen(showBackButton: true),
+      ),
+    );
   }
 
   void _navigateToWeeklySummary() {
