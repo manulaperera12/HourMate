@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../home/data/datasources/work_entry_local_datasource.dart';
+import '../../../home/data/models/work_entry_model.dart';
 import 'weekly_summary_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
@@ -17,6 +21,67 @@ class SummaryScreen extends StatefulWidget {
 
 class _SummaryScreenState extends State<SummaryScreen> {
   int _selectedTab = 0; // 0 = Chart, 1 = Weekly Summary
+  DateTime _selectedWeekStart = _getStartOfWeek(DateTime.now());
+  bool _loading = true;
+  List<WorkEntryModel> _weekEntries = [];
+
+  // Aggregated data
+  double _totalHours = 0;
+  List<double> _dailyHours = List.filled(7, 0);
+  Map<String, int> _ratings = {'Good': 0, 'Average': 0, 'Bad': 0};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWeekData();
+  }
+
+  Future<void> _loadWeekData() async {
+    setState(() => _loading = true);
+    final dataSource = WorkEntryLocalDataSource();
+    final allEntries = await dataSource.getAllEntries();
+    final weekEntries = allEntries.where((entry) {
+      final start = _selectedWeekStart;
+      final end = start.add(const Duration(days: 7));
+      return entry.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+          entry.date.isBefore(end);
+    }).toList();
+    // Aggregate
+    double totalHours = 0;
+    List<double> dailyHours = List.filled(7, 0);
+    Map<String, int> ratings = {'Good': 0, 'Average': 0, 'Bad': 0};
+    for (final entry in weekEntries) {
+      if (entry.endTime != null) {
+        final duration =
+            entry.endTime!.difference(entry.startTime).inMinutes / 60.0;
+        totalHours += duration;
+        int dayIdx = entry.date.weekday - 1; // 0=Mon
+        if (dayIdx >= 0 && dayIdx < 7) dailyHours[dayIdx] += duration;
+      }
+      // Count ratings
+      if (ratings.containsKey(entry.taskRating)) {
+        ratings[entry.taskRating] = ratings[entry.taskRating]! + 1;
+      }
+    }
+    setState(() {
+      _weekEntries = weekEntries;
+      _totalHours = totalHours;
+      _dailyHours = dailyHours;
+      _ratings = ratings;
+      _loading = false;
+    });
+  }
+
+  void _changeWeek(int offset) {
+    setState(() {
+      _selectedWeekStart = _selectedWeekStart.add(Duration(days: 7 * offset));
+    });
+    _loadWeekData();
+  }
+
+  static DateTime _getStartOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,26 +110,73 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 onBack: () => Navigator.of(context).pop(),
                 onAvatarTap: _navigateToProfile,
               ),
+              _buildWeekSelector(context),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      _buildTabBar(context),
-                      const SizedBox(height: 16),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: _selectedTab == 0
-                            ? _SummaryChartView()
-                            : const WeeklySummaryContent(),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 12),
+                            _buildTabBar(context),
+                            const SizedBox(height: 16),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: _selectedTab == 0
+                                  ? _SummaryChartView(
+                                      weekEntries: _weekEntries,
+                                      dailyHours: _dailyHours,
+                                    )
+                                  : WeeklySummaryContent(
+                                      totalHours: _totalHours,
+                                      dailyHours: _dailyHours,
+                                      ratings: _ratings,
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWeekSelector(BuildContext context) {
+    final weekEnd = _selectedWeekStart.add(const Duration(days: 6));
+    final formatter = DateFormat('MMM d');
+    final weekLabel =
+        '${formatter.format(_selectedWeekStart)} – ${formatter.format(weekEnd)}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.chevron_left,
+              color: AppTheme.neonYellowGreen,
+            ),
+            onPressed: () => _changeWeek(-1),
+          ),
+          Text(
+            weekLabel,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.secondaryTextColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.chevron_right,
+              color: AppTheme.neonYellowGreen,
+            ),
+            onPressed: () => _changeWeek(1),
+          ),
+        ],
       ),
     );
   }
@@ -121,7 +233,195 @@ class _SummaryScreenState extends State<SummaryScreen> {
   }
 }
 
+// Refactor WeeklySummaryContent to accept totalHours, dailyHours, and ratings
+class WeeklySummaryContent extends StatelessWidget {
+  final double totalHours;
+  final List<double> dailyHours;
+  final Map<String, int> ratings;
+  const WeeklySummaryContent({
+    super.key,
+    required this.totalHours,
+    required this.dailyHours,
+    required this.ratings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 12),
+        // Total hours
+        Text(
+          '${totalHours.toStringAsFixed(1)} h',
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+            color: AppTheme.neonYellowGreen,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Asap',
+            fontSize: 38,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Total hours this week',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: AppTheme.secondaryTextColor,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Bar chart
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 1.0,
+              colors: [
+                Color(0xFF2C2C2C),
+                Color(0xFF1A1A1A).withValues(alpha: 0.5),
+                Color(0xFF0D0D0D).withValues(alpha: 0.0),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.neonYellowGreen.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(7, (i) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 16,
+                    height: (dailyHours[i] / 8.0) * 60 + 8, // max 8h
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          AppTheme.headerGradientEnd,
+                          AppTheme.headerGradientStart,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    days[i],
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.secondaryTextColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 28),
+        // Task rating summary
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _RatingChip(
+                label: 'Good',
+                count: ratings['Good'] ?? 0,
+                color: AppTheme.goodRatingColor,
+                icon: Icons.sentiment_satisfied_alt_rounded,
+              ),
+              _RatingChip(
+                label: 'Average',
+                count: ratings['Average'] ?? 0,
+                color: AppTheme.averageRatingColor,
+                icon: Icons.sentiment_neutral_rounded,
+              ),
+              _RatingChip(
+                label: 'Bad',
+                count: ratings['Bad'] ?? 0,
+                color: AppTheme.badRatingColor,
+                icon: Icons.sentiment_dissatisfied_rounded,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
+    );
+  }
+}
+
+// Move _RatingChip above WeeklySummaryContent so it is in scope
+class _RatingChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final IconData icon;
+
+  const _RatingChip({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            ' $count',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Refactor _SummaryChartView to accept weekEntries and dailyHours
 class _SummaryChartView extends StatefulWidget {
+  final List<WorkEntryModel> weekEntries;
+  final List<double> dailyHours;
+
+  const _SummaryChartView({
+    required this.weekEntries,
+    required this.dailyHours,
+  });
+
   @override
   State<_SummaryChartView> createState() => _SummaryChartViewState();
 }
@@ -131,90 +431,68 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
   int _selectedDayIndex = 0; // For per-hour mode
   SummaryFilter _selectedFilter = SummaryFilter.workHours;
 
+  // Helper to map rating string to numeric value
+  int _ratingToValue(String rating) {
+    switch (rating) {
+      case 'Good':
+        return 100;
+      case 'Average':
+        return 60;
+      case 'Bad':
+        return 20;
+      default:
+        return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Mock data for each filter
-    final List<double> dailyHours = [6.0, 7.5, 5.0, 8.0, 6.0, 0.0, 0.0];
-    final List<double> dailyTasks = [3, 5, 2, 6, 4, 0, 0];
-    final List<double> dailyProductivity = [80, 90, 70, 95, 85, 0, 0];
-    final List<double> hourlyHours = [
-      0,
-      0,
-      0,
-      0,
-      0.5,
-      1,
-      1,
-      0.5,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-    ];
-    final List<double> hourlyTasks = [
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-    ];
-    final List<double> hourlyProductivity = [
-      60,
-      70,
-      65,
-      80,
-      90,
-      85,
-      80,
-      75,
-      70,
-      60,
-      65,
-      70,
-      80,
-      85,
-      90,
-      95,
-      80,
-      75,
-      70,
-      60,
-      65,
-      70,
-      80,
-      85,
-    ];
+    final List<double> dailyHours = widget.dailyHours;
+    // --- Tasks and Productivity Aggregation ---
+    // Per Day
+    List<double> dailyTasks = List.filled(7, 0);
+    List<double> dailyProductivity = List.filled(7, 0);
+    for (int i = 0; i < 7; i++) {
+      final day = i + 1; // weekday: 1=Mon
+      final entriesForDay = widget.weekEntries
+          .where((e) => e.date.weekday == day && e.endTime != null)
+          .toList();
+      dailyTasks[i] = entriesForDay.length.toDouble();
+      if (entriesForDay.isNotEmpty) {
+        final ratings = entriesForDay
+            .map((e) => _ratingToValue(e.taskRating))
+            .toList();
+        dailyProductivity[i] = ratings.reduce((a, b) => a + b) / ratings.length;
+      }
+    }
+    // Per Hour (for selected day)
+    List<double> hourlyHours = List.filled(24, 0);
+    List<double> hourlyTasks = List.filled(24, 0);
+    List<double> hourlyProductivity = List.filled(24, 0);
+    if (!_perDay && widget.weekEntries.isNotEmpty) {
+      final selectedDay = _selectedDayIndex + 1; // weekday: 1=Mon
+      final entriesForDay = widget.weekEntries
+          .where((e) => e.date.weekday == selectedDay && e.endTime != null)
+          .toList();
+      List<List<int>> productivityBuckets = List.generate(24, (_) => []);
+      for (final entry in entriesForDay) {
+        int startHour = entry.startTime.hour;
+        double duration =
+            entry.endTime!.difference(entry.startTime).inMinutes / 60.0;
+        if (startHour >= 0 && startHour < 24) {
+          hourlyHours[startHour] += duration;
+          hourlyTasks[startHour] += 1;
+          productivityBuckets[startHour].add(_ratingToValue(entry.taskRating));
+        }
+      }
+      for (int h = 0; h < 24; h++) {
+        if (productivityBuckets[h].isNotEmpty) {
+          hourlyProductivity[h] =
+              productivityBuckets[h].reduce((a, b) => a + b) /
+              productivityBuckets[h].length;
+        }
+      }
+    }
     final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final List<String> hours = [
       '00',
