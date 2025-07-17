@@ -46,12 +46,8 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor.withValues(alpha: 0.8),
+        color: AppTheme.tabBarBg.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppTheme.disabledTextColor.withValues(alpha: 0.18),
-          width: 1.5,
-        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),

@@ -15,30 +15,36 @@ class StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _StatCard(
-            icon: Icons.access_time,
-            iconColor: AppTheme.statYellow,
-            value: hoursWorked,
-            label: 'Hours Worked',
-          ),
-          _StatCard(
-            icon: Icons.check_circle,
-            iconColor: AppTheme.statBlue,
-            value: '$tasksDone',
-            label: 'Tasks Done',
-          ),
-          _StatCard(
-            icon: Icons.star,
-            iconColor: AppTheme.statOrange,
-            value: '+$productivityScore',
-            label: 'Productivity',
-          ),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.tabBarBg.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _StatCard(
+              icon: Icons.access_time,
+              iconColor: AppTheme.statYellow,
+              value: hoursWorked,
+              label: 'Hours Worked',
+            ),
+            _StatCard(
+              icon: Icons.check_circle,
+              iconColor: AppTheme.statBlue,
+              value: '$tasksDone',
+              label: 'Tasks Done',
+            ),
+            _StatCard(
+              icon: Icons.star,
+              iconColor: AppTheme.statOrange,
+              value: '+$productivityScore',
+              label: 'Productivity',
+            ),
+          ],
+        ),
       ),
     );
   }

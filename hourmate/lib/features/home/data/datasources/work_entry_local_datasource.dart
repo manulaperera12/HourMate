@@ -1,77 +1,67 @@
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/work_entry_model.dart';
-import '../../../../core/constants/app_constants.dart';
 
-abstract class WorkEntryLocalDataSource {
-  Future<List<WorkEntryModel>> getAllWorkEntries();
-  Future<void> saveWorkEntry(WorkEntryModel workEntry);
-  Future<void> updateWorkEntry(WorkEntryModel workEntry);
-  Future<void> deleteWorkEntry(String id);
-}
+class WorkEntryLocalDataSource {
+  static const String _workEntriesKey = 'work_entries';
 
-class WorkEntryLocalDataSourceImpl implements WorkEntryLocalDataSource {
-  final SharedPreferences sharedPreferences;
+  Future<List<WorkEntryModel>> getAllEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final entriesJson = prefs.getStringList(_workEntriesKey) ?? [];
+    return entriesJson.map((e) => WorkEntryModel.fromJson(e)).toList();
+  }
 
-  WorkEntryLocalDataSourceImpl({required this.sharedPreferences});
-
-  @override
-  Future<List<WorkEntryModel>> getAllWorkEntries() async {
-    final String? workEntriesJson = sharedPreferences.getString(
-      AppConstants.workEntriesKey,
+  Future<void> addEntry(WorkEntryModel entry) async {
+    final prefs = await SharedPreferences.getInstance();
+    final entries = await getAllEntries();
+    entries.add(entry);
+    await prefs.setStringList(
+      _workEntriesKey,
+      entries.map((e) => e.toJson()).toList(),
     );
+  }
 
-    if (workEntriesJson == null || workEntriesJson.isEmpty) {
-      return [];
+  Future<void> updateEntry(WorkEntryModel entry) async {
+    final prefs = await SharedPreferences.getInstance();
+    final entries = await getAllEntries();
+    final idx = entries.indexWhere((e) => e.id == entry.id);
+    if (idx != -1) {
+      entries[idx] = entry;
+      await prefs.setStringList(
+        _workEntriesKey,
+        entries.map((e) => e.toJson()).toList(),
+      );
     }
+  }
 
+  Future<WorkEntryModel?> getActiveEntry() async {
+    final entries = await getAllEntries();
     try {
-      final List<dynamic> jsonList = json.decode(workEntriesJson);
-      return jsonList
-          .map((json) => WorkEntryModel.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      // If there's an error parsing, return empty list
-      return [];
+      return entries.lastWhere((e) => e.endTime == null);
+    } catch (_) {
+      return null;
     }
   }
 
-  @override
-  Future<void> saveWorkEntry(WorkEntryModel workEntry) async {
-    final List<WorkEntryModel> existingEntries = await getAllWorkEntries();
-    existingEntries.add(workEntry);
-    await _saveWorkEntries(existingEntries);
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_workEntriesKey);
   }
 
-  @override
-  Future<void> updateWorkEntry(WorkEntryModel workEntry) async {
-    final List<WorkEntryModel> existingEntries = await getAllWorkEntries();
-    final int index = existingEntries.indexWhere(
-      (entry) => entry.id == workEntry.id,
-    );
+  // Alias for repository compatibility
+  Future<List<WorkEntryModel>> getAllWorkEntries() async => getAllEntries();
 
-    if (index != -1) {
-      existingEntries[index] = workEntry;
-      await _saveWorkEntries(existingEntries);
-    }
-  }
+  Future<void> saveWorkEntry(WorkEntryModel entry) async => addEntry(entry);
 
-  @override
+  Future<void> updateWorkEntry(WorkEntryModel entry) async =>
+      updateEntry(entry);
+
   Future<void> deleteWorkEntry(String id) async {
-    final List<WorkEntryModel> existingEntries = await getAllWorkEntries();
-    existingEntries.removeWhere((entry) => entry.id == id);
-    await _saveWorkEntries(existingEntries);
-  }
-
-  Future<void> _saveWorkEntries(List<WorkEntryModel> workEntries) async {
-    final List<Map<String, dynamic>> jsonList = workEntries
-        .map((entry) => entry.toJson())
-        .toList();
-
-    final String workEntriesJson = json.encode(jsonList);
-    await sharedPreferences.setString(
-      AppConstants.workEntriesKey,
-      workEntriesJson,
+    final prefs = await SharedPreferences.getInstance();
+    final entries = await getAllEntries();
+    entries.removeWhere((e) => e.id == id);
+    await prefs.setStringList(
+      _workEntriesKey,
+      entries.map((e) => e.toJson()).toList(),
     );
   }
 }
