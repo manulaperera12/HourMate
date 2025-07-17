@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_tile.dart';
 import '../widgets/settings_switch_tile.dart';
@@ -49,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Settings',
                 subtitle: 'Customize your HourMate experience',
                 showBackButton: widget.showBackButton,
+                onAvatarTap: _navigateToProfile,
               ),
 
               // Settings Content
@@ -442,6 +444,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text('Reset', style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(showBackButton: true),
       ),
     );
   }

@@ -7,6 +7,7 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback? onSettingsTap;
   final bool showBackButton;
   final VoidCallback? onBack;
+  final VoidCallback? onAvatarTap;
 
   const HomeHeader({
     super.key,
@@ -14,6 +15,7 @@ class HomeHeader extends StatelessWidget {
     this.onSettingsTap,
     this.showBackButton = false,
     this.onBack,
+    this.onAvatarTap,
   });
 
   @override
@@ -23,6 +25,7 @@ class HomeHeader extends StatelessWidget {
       subtitle: dateRange,
       showBackButton: showBackButton,
       onBack: onBack,
+      onAvatarTap: onAvatarTap,
       actions: onSettingsTap != null
           ? [
               Material(

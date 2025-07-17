@@ -75,7 +75,7 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.progressEnd.withOpacity(0.18),
+                        color: AppTheme.progressEnd.withValues(alpha: 0.18),
                         blurRadius: 18,
                         offset: const Offset(0, 6),
                       ),
@@ -120,7 +120,7 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                           '$hours:$minutes:$seconds',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: Colors.white.withOpacity(0.95),
+                                color: Colors.white.withValues(alpha: 0.95),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                                 letterSpacing: 1.2,
@@ -136,7 +136,7 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                   Text(
                     'Active since ${DateFormat(AppConstants.timeFormat).format(widget.activeWorkEntry!.startTime)}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 13,
                     ),
                   ),

@@ -10,6 +10,7 @@ class AppHeader extends StatelessWidget {
   final List<Widget>? actions;
   final Color? backgroundColor;
   final bool showShadow;
+  final VoidCallback? onAvatarTap;
 
   const AppHeader({
     super.key,
@@ -21,6 +22,7 @@ class AppHeader extends StatelessWidget {
     this.actions,
     this.backgroundColor,
     this.showShadow = true,
+    this.onAvatarTap,
   });
 
   @override
@@ -56,7 +58,7 @@ class AppHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.neonYellowGreen.withOpacity(0.10),
+                      color: AppTheme.neonYellowGreen.withValues(alpha: 0.10),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -73,24 +75,27 @@ class AppHeader extends StatelessWidget {
             leading!
           else
             // Default avatar
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  width: 3,
+            GestureDetector(
+              onTap: onAvatarTap,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    width: 3,
+                  ),
                 ),
-              ),
-              child: CircleAvatar(
-                radius: 32,
-                backgroundColor: AppTheme.neonYellowGreen,
-                child: Text(
-                  'HM',
-                  style: const TextStyle(
-                    color: AppTheme.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                    letterSpacing: 1.5,
+                child: CircleAvatar(
+                  radius: 32,
+                  backgroundColor: AppTheme.neonYellowGreen,
+                  child: Text(
+                    'HM',
+                    style: const TextStyle(
+                      color: AppTheme.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      letterSpacing: 1.5,
+                    ),
                   ),
                 ),
               ),
