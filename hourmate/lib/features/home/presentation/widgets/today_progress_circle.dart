@@ -28,7 +28,7 @@ class TodayProgressCircle extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.progressEnd.withOpacity(0.12),
+                color: AppTheme.progressEnd.withValues(alpha: 0.12),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),

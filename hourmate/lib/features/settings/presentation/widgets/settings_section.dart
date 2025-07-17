@@ -43,7 +43,7 @@ class SettingsSection extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.13),
+                    color: color.withValues(alpha: 0.13),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 24),
@@ -63,7 +63,7 @@ class SettingsSection extends StatelessWidget {
             ),
           ),
           // Section Content
-          ...children.map((child) => child).toList(),
+          ...children,
         ],
       ),
     );

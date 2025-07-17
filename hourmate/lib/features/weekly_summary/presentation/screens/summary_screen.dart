@@ -3,6 +3,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import 'weekly_summary_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 
 enum SummaryFilter { workHours, tasks, productivity }
 
@@ -42,6 +43,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 subtitle: 'Visualize your weekly work stats',
                 showBackButton: widget.showBackButton,
                 onBack: () => Navigator.of(context).pop(),
+                onAvatarTap: _navigateToProfile,
               ),
               const SizedBox(height: 12),
               _buildTabBar(context),
@@ -98,6 +100,14 @@ class _SummaryScreenState extends State<SummaryScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(showBackButton: true),
       ),
     );
   }
@@ -235,7 +245,6 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
         case SummaryFilter.productivity:
           return dailyProductivity;
         case SummaryFilter.workHours:
-        default:
           return dailyHours;
       }
     }
@@ -247,7 +256,6 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
         case SummaryFilter.productivity:
           return hourlyProductivity;
         case SummaryFilter.workHours:
-        default:
           return hourlyHours;
       }
     }
@@ -516,10 +524,10 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                                       : '${hours[spot.x.toInt()]}: ${spot.y.toStringAsFixed(0)}%';
                                   break;
                                 case SummaryFilter.workHours:
-                                default:
                                   label = _perDay
                                       ? '${days[spot.x.toInt()]}: ${spot.y.toStringAsFixed(1)} h'
                                       : '${hours[spot.x.toInt()]}: ${spot.y.toStringAsFixed(1)} h';
+                                  break;
                               }
                               return LineTooltipItem(
                                 label,
@@ -641,29 +649,6 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
   }
 }
 
-class _DaySelector extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final days = ['W', 'T', 'F', 'S', 'S', 'M', 'T'];
-    return Row(
-      children: days
-          .map(
-            (d) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text(
-                d,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.secondaryTextColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
 class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -718,54 +703,4 @@ class _FilterChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NeonLineChartPainter extends CustomPainter {
-  final List<double> data;
-  final double maxY;
-  _NeonLineChartPainter({required this.data, required this.maxY});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.neonYellowGreen
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    final path = Path();
-    final dx = size.width / (data.length - 1);
-    for (int i = 0; i < data.length; i++) {
-      final x = i * dx;
-      final y = size.height - (data[i] / maxY) * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, paint);
-
-    // Draw a second, thinner cyan line for accent
-    final accentPaint = Paint()
-      ..color = AppTheme.cyanBlue
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    final accentPath = Path();
-    for (int i = 0; i < data.length; i++) {
-      final x = i * dx;
-      final y =
-          size.height - (data[(i + 3) % data.length] / maxY) * size.height;
-      if (i == 0) {
-        accentPath.moveTo(x, y);
-      } else {
-        accentPath.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(accentPath, accentPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

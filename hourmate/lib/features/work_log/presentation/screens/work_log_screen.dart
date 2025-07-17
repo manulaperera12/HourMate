@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 // import '../widgets/rounded_gradient_header.dart';
 
 class WorkLogScreen extends StatefulWidget {
@@ -165,6 +166,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                 onBack: widget.showBackButton
                     ? () => Navigator.of(context).pop()
                     : null,
+                onAvatarTap: _navigateToProfile,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -251,6 +253,14 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(showBackButton: true),
       ),
     );
   }

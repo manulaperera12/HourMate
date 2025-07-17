@@ -110,7 +110,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.13),
+                color: Colors.black.withValues(alpha: 0.13),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -122,9 +122,8 @@ class _MainScaffoldState extends State<MainScaffold> {
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.transparent,
               selectedItemColor: AppTheme.bottomNavSelected,
-              unselectedItemColor: AppTheme.bottomNavUnselected.withOpacity(
-                0.7,
-              ),
+              unselectedItemColor:
+                  AppTheme.bottomNavUnselected.withValues(alpha: 0.7),
               selectedFontSize: 13,
               unselectedFontSize: 13,
               iconSize: 28,

@@ -74,7 +74,7 @@ class _ClockInModalState extends State<ClockInModal> {
                     borderRadius: BorderRadius.circular(3),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.neonYellowGreen.withOpacity(0.45),
+                        color: AppTheme.neonYellowGreen.withValues(alpha: 0.45),
                         blurRadius: 12,
                         offset: const Offset(0, 2),
                       ),
@@ -183,8 +183,9 @@ class _ClockInModalState extends State<ClockInModal> {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                              color: AppTheme.secondaryTextColor.withOpacity(
-                                0.2,
+                              color:
+                                  AppTheme.secondaryTextColor.withValues(
+                                alpha: 0.2,
                               ),
                             ),
                           ),

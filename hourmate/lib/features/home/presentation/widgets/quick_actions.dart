@@ -84,7 +84,7 @@ class QuickActions extends StatelessWidget {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.13),
+                    color: color.withValues(alpha: 0.13),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 28),

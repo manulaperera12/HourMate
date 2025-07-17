@@ -28,7 +28,7 @@ class SettingsSwitchTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: AppTheme.surfaceColor.withOpacity(0.3),
+              color: AppTheme.surfaceColor.withValues(alpha: 0.3),
             ),
             child: Row(
               children: [
@@ -74,11 +74,11 @@ class SettingsSwitchTile extends StatelessWidget {
                         : null,
                     color: value
                         ? null
-                        : AppTheme.disabledTextColor.withOpacity(0.3),
+                        : AppTheme.disabledTextColor.withValues(alpha: 0.3),
                     boxShadow: value
                         ? [
                             BoxShadow(
-                              color: AppTheme.cyanBlue.withOpacity(0.3),
+                              color: AppTheme.cyanBlue.withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -101,7 +101,7 @@ class SettingsSwitchTile extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),

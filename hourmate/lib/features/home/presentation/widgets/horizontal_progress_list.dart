@@ -37,7 +37,7 @@ class HorizontalProgressList extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.progressEnd.withOpacity(0.10),
+                          color: AppTheme.progressEnd.withValues(alpha: 0.10),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

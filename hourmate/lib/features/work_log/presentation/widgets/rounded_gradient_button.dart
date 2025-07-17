@@ -38,7 +38,7 @@ class RoundedGradientButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.headerGradientStart.withOpacity(0.10),
+                color: AppTheme.headerGradientStart.withValues(alpha: 0.10),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),

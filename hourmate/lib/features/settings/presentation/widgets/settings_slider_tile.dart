@@ -38,7 +38,7 @@ class NeonGradientSliderTrackShape extends SliderTrackShape {
     // Overlay inactive (disabled) track if needed
     if (!isEnabled) {
       final Paint inactivePaint = Paint()
-        ..color = AppTheme.disabledTextColor.withOpacity(0.3);
+        ..color = AppTheme.disabledTextColor.withValues(alpha: 0.3);
       context.canvas.drawRRect(
         RRect.fromRectAndRadius(trackRect, Radius.circular(3)),
         inactivePaint,
@@ -93,7 +93,7 @@ class SettingsSliderTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: AppTheme.surfaceColor.withOpacity(0.3),
+            color: AppTheme.surfaceColor.withValues(alpha: 0.3),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +133,7 @@ class SettingsSliderTile extends StatelessWidget {
                   trackHeight: 6,
                   trackShape: const NeonGradientSliderTrackShape(),
                   thumbColor: Colors.white,
-                  overlayColor: AppTheme.cyanBlue.withOpacity(0.15),
+                  overlayColor: AppTheme.cyanBlue.withValues(alpha: 0.15),
                   activeTrackColor: Colors.transparent,
                   inactiveTrackColor: Colors.transparent,
                   thumbShape: const RoundSliderThumbShape(

@@ -16,6 +16,7 @@ import '../widgets/today_progress_circle.dart';
 import '../widgets/stats_row.dart';
 import '../../../work_log/presentation/screens/work_log_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import '../../../profile/presentation/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool showBackButton;
@@ -97,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         HomeHeader(
                           dateRange: 'Jul 15-21',
                           onSettingsTap: _navigateToSettings,
+                          onAvatarTap: _navigateToProfile,
                           showBackButton: widget.showBackButton,
                           onBack: () => Navigator.of(context).pop(),
                         ),
@@ -110,58 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 30),
-                        HorizontalProgressList(weekProgress: _mockWeekProgress),
-                        const SizedBox(height: 30),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              // border: Border.all(
-                              //   color: AppTheme.disabledTextColor,
-                              //   width: 2,
-                              // ),
-                              gradient: RadialGradient(
-                                center: Alignment.center,
-                                radius:
-                                    1.0, // Adjust radius to control the spread of the gradient
-                                colors: [
-                                  Color(0xFF2C2C2C), // Dark grey for the center
-                                  Color(0xFF1A1A1A).withValues(
-                                    alpha: 0.5,
-                                  ), // Slightly darker grey for the outer part
-                                  Color(0xFF0D0D0D).withValues(
-                                    alpha: 0.0,
-                                  ), // Even darker, almost black for the edges
-                                ],
-                                stops: const [
-                                  0.0,
-                                  0.5,
-                                  1.0,
-                                ], // Control where each color stops
-                              ),
-                              color: null, // Remove solid color
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Column(
-                              children: [
-                                TodayProgressCircle(
-                                  worked: const Duration(hours: 6, minutes: 10),
-                                  goal: const Duration(hours: 8),
-                                ),
-                                const SizedBox(height: 20),
-                                StatsRow(
-                                  hoursWorked: '6:10',
-                                  tasksDone: 5,
-                                  productivityScore: 80,
-                                ),
-                              ],
-                            ),
-                          ),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _buildTabContent(_selectedTab, state),
                         ),
-
                         const SizedBox(height: 20),
                         // Clock In/Out Button
                         ClockInOutButton(
@@ -260,6 +214,350 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildTabContent(int index, WorkTrackingState state) {
+    switch (index) {
+      case 0: // Today
+        return Container(
+          key: const ValueKey('today'),
+          child: Column(
+            children: [
+              HorizontalProgressList(weekProgress: _mockWeekProgress),
+              const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.0,
+                      colors: [
+                        const Color(0xFF2C2C2C),
+                        const Color(0xFF1A1A1A).withValues(alpha: 0.5),
+                        const Color(0xFF0D0D0D).withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      TodayProgressCircle(
+                        worked: const Duration(hours: 6, minutes: 10),
+                        goal: const Duration(hours: 8),
+                      ),
+                      const SizedBox(height: 20),
+                      StatsRow(
+                        hoursWorked: '6:10',
+                        tasksDone: 5,
+                        productivityScore: 80,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case 1: // Plans
+        return Container(
+          key: const ValueKey('plans'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                // Plans Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.0,
+                      colors: [
+                        const Color(0xFF2C2C2C),
+                        const Color(0xFF1A1A1A).withValues(alpha: 0.5),
+                        const Color(0xFF0D0D0D).withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppTheme.cyanBlue.withValues(alpha: 0.13),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.calendar_today_rounded,
+                              color: AppTheme.cyanBlue,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'This Week\'s Plan',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryTextColor,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Track your weekly goals',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppTheme.secondaryTextColor,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Weekly Goals
+                      _buildGoalItem(
+                        'Complete Project A',
+                        0.7,
+                        AppTheme.neonYellowGreen,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildGoalItem('Code Review', 0.9, AppTheme.cyanBlue),
+                      const SizedBox(height: 12),
+                      _buildGoalItem('Documentation', 0.4, AppTheme.orange),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      case 2: // Daily
+        return Container(
+          key: const ValueKey('daily'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                // Daily Stats Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.0,
+                      colors: [
+                        const Color(0xFF2C2C2C),
+                        const Color(0xFF1A1A1A).withValues(alpha: 0.5),
+                        const Color(0xFF0D0D0D).withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppTheme.orange.withValues(alpha: 0.13),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.trending_up_rounded,
+                              color: AppTheme.orange,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Daily Insights',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryTextColor,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Your productivity patterns',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppTheme.secondaryTextColor,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Daily Stats
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDailyStat(
+                              'Peak Hours',
+                              '9 AM - 11 AM',
+                              Icons.access_time_rounded,
+                              AppTheme.neonYellowGreen,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDailyStat(
+                              'Focus Score',
+                              '85%',
+                              Icons.psychology_rounded,
+                              AppTheme.cyanBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDailyStat(
+                              'Breaks Taken',
+                              '3',
+                              Icons.coffee_rounded,
+                              AppTheme.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDailyStat(
+                              'Tasks Done',
+                              '8/10',
+                              Icons.check_circle_rounded,
+                              AppTheme.neonYellowGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildGoalItem(String title, double progress, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primaryTextColor,
+              ),
+            ),
+            Text(
+              '${(progress * 100).round()}%',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 6,
+          decoration: BoxDecoration(
+            color: AppTheme.disabledTextColor.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color, color.withValues(alpha: 0.7)],
+                ),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDailyStat(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryTextColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.secondaryTextColor),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showClockInModal() {
     showModalBottomSheet(
       context: context,
@@ -298,6 +596,14 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const SettingsScreen(showBackButton: true),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(showBackButton: true),
       ),
     );
   }
