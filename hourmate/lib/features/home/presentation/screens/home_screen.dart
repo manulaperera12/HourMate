@@ -212,10 +212,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     StartBreak(durationMinutes: _breakDuration),
                                   );
                                 },
-                                onEndBreak: () {
+                                onEndBreak: () async {
                                   context.read<WorkTrackingBloc>().add(
                                     const EndBreak(),
                                   );
+                                  final duration =
+                                      await SettingsService.getBreakDuration();
+                                  setState(() {
+                                    _breakDuration = duration;
+                                  });
                                 },
                               ),
                               // Today's Work Summary
