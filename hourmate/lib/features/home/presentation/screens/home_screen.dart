@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../weekly_summary/presentation/screens/summary_screen.dart';
 import '../blocs/work_tracking_bloc.dart';
 import '../widgets/clock_in_out_button.dart';
 import '../widgets/work_status_card.dart';
@@ -14,6 +15,7 @@ import '../widgets/horizontal_progress_list.dart';
 import '../widgets/today_progress_circle.dart';
 import '../widgets/stats_row.dart';
 import '../../../work_log/presentation/screens/work_log_screen.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool showBackButton;
@@ -258,69 +260,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 18),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bottomNavBg,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.13),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            selectedItemColor: AppTheme.bottomNavSelected,
-            unselectedItemColor: AppTheme.bottomNavUnselected.withOpacity(0.7),
-            selectedFontSize: 13,
-            unselectedFontSize: 13,
-            iconSize: 28,
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history_rounded),
-                label: 'Log',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bar_chart_rounded),
-                label: 'Summary',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings_rounded),
-                label: 'Settings',
-              ),
-            ],
-            onTap: (index) {
-              switch (index) {
-                case 1:
-                  _navigateToWorkLog();
-                  break;
-                case 2:
-                  _navigateToWeeklySummary();
-                  break;
-                case 3:
-                  _navigateToSettings();
-                  break;
-              }
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showClockInModal() {
     showModalBottomSheet(
       context: context,
@@ -348,10 +287,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToWeeklySummary() {
-    // TODO: Navigate to weekly summary page
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SummaryScreen(showBackButton: true),
+      ),
+    );
   }
 
   void _navigateToSettings() {
-    // TODO: Navigate to settings page
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(showBackButton: true),
+      ),
+    );
   }
 }

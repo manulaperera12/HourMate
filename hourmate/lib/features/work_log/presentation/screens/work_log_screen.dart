@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../widgets/rounded_gradient_header.dart';
+import '../../../../core/widgets/app_header.dart';
+// import '../widgets/rounded_gradient_header.dart';
 
 class WorkLogScreen extends StatefulWidget {
   final bool showBackButton;
@@ -157,8 +158,9 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              RoundedGradientHeader(
+              AppHeader(
                 title: 'Work Log',
+                subtitle: 'View and filter your work sessions',
                 showBackButton: widget.showBackButton,
                 onBack: widget.showBackButton
                     ? () => Navigator.of(context).pop()

@@ -13,6 +13,7 @@ import 'features/home/presentation/blocs/work_tracking_bloc.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'features/work_log/presentation/screens/work_log_screen.dart';
 import 'features/weekly_summary/presentation/screens/summary_screen.dart';
+import 'features/settings/presentation/screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,8 +88,8 @@ class _MainScaffoldState extends State<MainScaffold> {
   final List<Widget> _screens = [
     HomeScreen(showBackButton: false),
     WorkLogScreen(showBackButton: false),
-    SummaryScreen(), // Use new SummaryScreen as main tab
-    Container(), // Placeholder for settings
+    SummaryScreen(showBackButton: false), // Use new SummaryScreen as main tab
+    SettingsScreen(showBackButton: false), // Settings screen
   ];
 
   void _onTabTapped(int index) {
