@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../widgets/profile_stats_card.dart';
@@ -16,22 +17,79 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock user data
-  final Map<String, dynamic> _userData = {
-    'name': 'Alex Johnson',
-    'email': 'alex.johnson@email.com',
-    'position': 'Senior Developer',
-    'company': 'TechCorp Inc.',
-    'avatar': 'AJ',
-    'joinDate': 'March 2023',
-    'totalHours': 1247.5,
-    'totalSessions': 342,
-    'averageRating': 4.2,
-    'streakDays': 28,
-    'level': 15,
-    'experience': 1250,
-    'nextLevel': 1500,
-  };
+  Map<String, dynamic> _userData = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      setState(() {
+        _userData = {
+          'name': prefs.getString('user_name') ?? 'User',
+          'email': prefs.getString('user_email') ?? 'user@email.com',
+          'position': prefs.getString('user_position') ?? 'Professional',
+          'company': prefs.getString('user_company') ?? 'Company',
+          'avatar': prefs.getString('user_avatar') ?? 'U',
+          'joinDate': _formatJoinDate(prefs.getString('join_date')),
+          'totalHours': prefs.getDouble('total_hours') ?? 0.0,
+          'totalSessions': prefs.getInt('total_sessions') ?? 0,
+          'averageRating': prefs.getDouble('average_rating') ?? 0.0,
+          'streakDays': prefs.getInt('streak_days') ?? 0,
+          'level': prefs.getInt('level') ?? 1,
+          'experience': prefs.getInt('experience') ?? 0,
+          'nextLevel': prefs.getInt('next_level') ?? 100,
+        };
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _userData = {
+          'name': 'User',
+          'email': 'user@email.com',
+          'position': 'Professional',
+          'company': 'Company',
+          'avatar': 'U',
+          'joinDate': 'Recently',
+          'totalHours': 0.0,
+          'totalSessions': 0,
+          'averageRating': 0.0,
+          'streakDays': 0,
+          'level': 1,
+          'experience': 0,
+          'nextLevel': 100,
+        };
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatJoinDate(String? dateString) {
+    if (dateString == null) return 'Recently';
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date).inDays;
+
+      if (difference < 30) {
+        return '${difference} days ago';
+      } else if (difference < 365) {
+        final months = (difference / 30).floor();
+        return '${months} month${months > 1 ? 's' : ''} ago';
+      } else {
+        final years = (difference / 365).floor();
+        return '${years} year${years > 1 ? 's' : ''} ago';
+      }
+    } catch (e) {
+      return 'Recently';
+    }
+  }
 
   final List<Map<String, dynamic>> _achievements = [
     {
@@ -70,6 +128,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.cyanBlue, AppTheme.neonYellowGreen],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.neonYellowGreen.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: AppTheme.black,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Loading Profile...',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -105,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     radius: 32,
                     backgroundColor: AppTheme.neonYellowGreen,
                     child: Text(
-                      _userData['avatar'],
+                      _userData['avatar'] ?? 'U',
                       style: const TextStyle(
                         color: AppTheme.black,
                         fontWeight: FontWeight.bold,
@@ -116,7 +219,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-
               // Profile Content
               Expanded(
                 child: SingleChildScrollView(

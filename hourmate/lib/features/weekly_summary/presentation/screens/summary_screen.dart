@@ -45,14 +45,22 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 onBack: () => Navigator.of(context).pop(),
                 onAvatarTap: _navigateToProfile,
               ),
-              const SizedBox(height: 12),
-              _buildTabBar(context),
-              const SizedBox(height: 16),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _selectedTab == 0
-                    ? _SummaryChartView()
-                    : const WeeklySummaryContent(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildTabBar(context),
+                      const SizedBox(height: 16),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: _selectedTab == 0
+                            ? _SummaryChartView()
+                            : const WeeklySummaryContent(),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -326,6 +334,12 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                             selected: _selectedDayIndex == i,
                             selectedColor: AppTheme.neonYellowGreen,
                             backgroundColor: AppTheme.cardColor,
+                            side: BorderSide(
+                              color: _selectedDayIndex == i
+                                  ? AppTheme.neonYellowGreen
+                                  : AppTheme.disabledTextColor,
+                              width: 1.5,
+                            ),
                             onSelected: (selected) {
                               setState(() => _selectedDayIndex = i);
                             },
@@ -624,7 +638,9 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
           color: isSelected ? AppTheme.tabSelected : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? AppTheme.tabSelected : AppTheme.dividerColor,
+            color: isSelected
+                ? AppTheme.tabSelected
+                : AppTheme.disabledTextColor,
             width: 1.5,
           ),
           boxShadow: isSelected

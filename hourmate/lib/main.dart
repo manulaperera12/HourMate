@@ -14,6 +14,7 @@ import 'features/home/presentation/screens/home_screen.dart';
 import 'features/work_log/presentation/screens/work_log_screen.dart';
 import 'features/weekly_summary/presentation/screens/summary_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
+import 'features/onboarding/presentation/screens/get_started_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Create dependencies
-    final WorkEntryLocalDataSource localDataSource =
-        WorkEntryLocalDataSourceImpl(sharedPreferences: sharedPreferences);
+    final WorkEntryLocalDataSource localDataSource = WorkEntryLocalDataSource();
 
     final WorkEntryRepositoryImpl repository = WorkEntryRepositoryImpl(
       localDataSource: localDataSource,
@@ -68,15 +68,106 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        home: const MainScaffold(),
+        home: OnboardingWrapper(
+          sharedPreferences: sharedPreferences,
+          getWorkEntriesUseCase: getWorkEntriesUseCase,
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );
   }
 }
 
+class OnboardingWrapper extends StatefulWidget {
+  final SharedPreferences sharedPreferences;
+  final GetWorkEntriesUseCase getWorkEntriesUseCase;
+
+  const OnboardingWrapper({
+    super.key,
+    required this.sharedPreferences,
+    required this.getWorkEntriesUseCase,
+  });
+
+  @override
+  State<OnboardingWrapper> createState() => _OnboardingWrapperState();
+}
+
+class _OnboardingWrapperState extends State<OnboardingWrapper> {
+  bool _isLoading = true;
+  bool _onboardingCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final onboardingCompleted =
+        widget.sharedPreferences.getBool('onboarding_completed') ?? false;
+    setState(() {
+      _onboardingCompleted = onboardingCompleted;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.cyanBlue, AppTheme.neonYellowGreen],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.neonYellowGreen.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.access_time_rounded,
+                  color: AppTheme.black,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'HourMate',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _onboardingCompleted
+        ? MainScaffold(getWorkEntriesUseCase: widget.getWorkEntriesUseCase)
+        : GetStartedScreen(getWorkEntriesUseCase: widget.getWorkEntriesUseCase);
+  }
+}
+
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  final GetWorkEntriesUseCase getWorkEntriesUseCase;
+  const MainScaffold({super.key, required this.getWorkEntriesUseCase});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
@@ -85,12 +176,24 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    HomeScreen(showBackButton: false),
-    WorkLogScreen(showBackButton: false),
-    SummaryScreen(showBackButton: false), // Use new SummaryScreen as main tab
-    SettingsScreen(showBackButton: false), // Settings screen
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(
+        showBackButton: false,
+        getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+      ),
+      WorkLogScreen(
+        showBackButton: false,
+        getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+      ),
+      SummaryScreen(showBackButton: false),
+      SettingsScreen(showBackButton: false),
+    ];
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -122,8 +225,9 @@ class _MainScaffoldState extends State<MainScaffold> {
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.transparent,
               selectedItemColor: AppTheme.bottomNavSelected,
-              unselectedItemColor:
-                  AppTheme.bottomNavUnselected.withValues(alpha: 0.7),
+              unselectedItemColor: AppTheme.bottomNavUnselected.withValues(
+                alpha: 0.7,
+              ),
               selectedFontSize: 13,
               unselectedFontSize: 13,
               iconSize: 28,

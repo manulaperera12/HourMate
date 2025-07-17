@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
-class AppHeader extends StatelessWidget {
+class AppHeader extends StatefulWidget {
   final String title;
   final String? subtitle;
   final bool showBackButton;
@@ -26,14 +27,41 @@ class AppHeader extends StatelessWidget {
   });
 
   @override
+  State<AppHeader> createState() => _AppHeaderState();
+}
+
+class _AppHeaderState extends State<AppHeader> {
+  String _userAvatar = 'HM';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAvatar();
+  }
+
+  Future<void> _loadUserAvatar() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final avatar = prefs.getString('user_avatar') ?? 'HM';
+      if (mounted) {
+        setState(() {
+          _userAvatar = avatar;
+        });
+      }
+    } catch (e) {
+      // Keep default avatar if there's an error
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: widget.backgroundColor,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: showShadow
+        boxShadow: widget.showShadow
             ? [
                 BoxShadow(
                   color: AppTheme.backgroundColor.withValues(alpha: 0.08),
@@ -47,9 +75,9 @@ class AppHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Leading widget (back button or custom leading)
-          if (showBackButton)
+          if (widget.showBackButton)
             GestureDetector(
-              onTap: onBack ?? () => Navigator.of(context).pop(),
+              onTap: widget.onBack ?? () => Navigator.of(context).pop(),
               child: Container(
                 width: 36,
                 height: 36,
@@ -71,12 +99,12 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
             )
-          else if (leading != null)
-            leading!
+          else if (widget.leading != null)
+            widget.leading!
           else
             // Default avatar
             GestureDetector(
-              onTap: onAvatarTap,
+              onTap: widget.onAvatarTap,
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -89,7 +117,7 @@ class AppHeader extends StatelessWidget {
                   radius: 32,
                   backgroundColor: AppTheme.neonYellowGreen,
                   child: Text(
-                    'HM',
+                    _userAvatar,
                     style: const TextStyle(
                       color: AppTheme.black,
                       fontWeight: FontWeight.bold,
@@ -107,17 +135,17 @@ class AppHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  widget.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppTheme.primaryTextColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
                   ),
                 ),
-                if (subtitle != null) ...[
+                if (widget.subtitle != null) ...[
                   const SizedBox(height: 6),
                   Text(
-                    subtitle!,
+                    widget.subtitle!,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.primaryTextColor.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
@@ -129,7 +157,10 @@ class AppHeader extends StatelessWidget {
             ),
           ),
           // Actions
-          if (actions != null) ...[const SizedBox(width: 16), ...actions!],
+          if (widget.actions != null) ...[
+            const SizedBox(width: 16),
+            ...widget.actions!,
+          ],
         ],
       ),
     );

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/services/settings_service.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_tile.dart';
 import '../widgets/settings_switch_tile.dart';
 import '../widgets/settings_slider_tile.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../home/presentation/blocs/work_tracking_bloc.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool showBackButton;
@@ -17,16 +21,117 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isLoading = true;
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = true;
   bool _autoClockOutEnabled = false;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   double _workGoalHours = 8.0;
-  double _breakReminderMinutes = 30.0;
+  double _breakReminderMinutes = 60.0;
+  String _workStartTime = '09:00';
+  String _workEndTime = '17:00';
+  double _weeklyGoal = 40.0;
+  bool _useSevenDays = false;
+  String _breakEndSound = 'chime.mp3';
+  final List<Map<String, String>> _soundOptions = [
+    {'file': 'chime.mp3', 'label': 'Chime'},
+    {'file': 'bell.mp3', 'label': 'Bell'},
+    {'file': 'beep.mp3', 'label': 'Beep'},
+  ];
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+    _loadBreakEndSound();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await SettingsService.getAllSettings();
+      final weeklyGoalDays = await SettingsService.getWeeklyGoalDays();
+      setState(() {
+        _notificationsEnabled = settings['notificationsEnabled'] ?? true;
+        _soundEnabled = settings['soundEnabled'] ?? true;
+        _vibrationEnabled = settings['vibrationEnabled'] ?? true;
+        _autoClockOutEnabled = settings['autoClockOutEnabled'] ?? false;
+        _workGoalHours = settings['dailyGoal'] ?? 8.0;
+        _breakReminderMinutes = settings['breakDuration']?.toDouble() ?? 60.0;
+        _workStartTime = settings['workStartTime'] ?? '09:00';
+        _workEndTime = settings['workEndTime'] ?? '17:00';
+        _weeklyGoal = settings['weeklyGoal'] ?? 40.0;
+        _useSevenDays = weeklyGoalDays == 7;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadBreakEndSound() async {
+    final sound = await SettingsService.getBreakEndSound();
+    setState(() {
+      _breakEndSound = sound;
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.cyanBlue, AppTheme.neonYellowGreen],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.neonYellowGreen.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.settings_rounded,
+                  color: AppTheme.black,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Loading Settings...',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -52,7 +157,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 showBackButton: widget.showBackButton,
                 onAvatarTap: _navigateToProfile,
               ),
-
               // Settings Content
               Expanded(
                 child: SingleChildScrollView(
@@ -70,6 +174,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.work_rounded,
                         color: AppTheme.neonYellowGreen,
                         children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: RadialGradient(
+                                  center: Alignment.center,
+                                  radius: 1.0,
+                                  colors: [
+                                    const Color(0xFF2C2C2C),
+                                    const Color(
+                                      0xFF1A1A1A,
+                                    ).withValues(alpha: 0.5),
+                                    const Color(
+                                      0xFF0D0D0D,
+                                    ).withValues(alpha: 0.0),
+                                  ],
+                                  stops: const [0.0, 0.5, 1.0],
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Weekly goal based on:',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppTheme.primaryTextColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      ChoiceChip(
+                                        label: Text(
+                                          '5 days',
+                                          style: TextStyle(
+                                            color: !_useSevenDays
+                                                ? AppTheme.primaryTextColor
+                                                : AppTheme.disabledTextColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          side: BorderSide(
+                                            color: AppTheme.dividerColor,
+                                          ),
+                                        ),
+                                        selected: !_useSevenDays,
+                                        selectedColor: AppTheme.neonYellowGreen,
+                                        backgroundColor: AppTheme.cardColor,
+                                        onSelected: (selected) async {
+                                          if (selected) {
+                                            setState(
+                                              () => _useSevenDays = false,
+                                            );
+                                            await SettingsService.setWeeklyGoalDays(
+                                              5,
+                                            );
+                                            if (mounted)
+                                              context
+                                                  .read<WorkTrackingBloc>()
+                                                  .add(LoadWorkEntries());
+                                            await _loadSettings();
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 12),
+                                      ChoiceChip(
+                                        label: Text(
+                                          '7 days',
+                                          style: TextStyle(
+                                            color: _useSevenDays
+                                                ? AppTheme.primaryTextColor
+                                                : AppTheme.disabledTextColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        selected: _useSevenDays,
+                                        selectedColor: AppTheme.neonYellowGreen,
+                                        backgroundColor: AppTheme.cardColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          side: BorderSide(
+                                            color: AppTheme.dividerColor,
+                                          ),
+                                        ),
+                                        onSelected: (selected) async {
+                                          if (selected) {
+                                            setState(
+                                              () => _useSevenDays = true,
+                                            );
+                                            await SettingsService.setWeeklyGoalDays(
+                                              7,
+                                            );
+                                            if (mounted)
+                                              context
+                                                  .read<WorkTrackingBloc>()
+                                                  .add(LoadWorkEntries());
+                                            await _loadSettings();
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           SettingsSliderTile(
                             title: 'Daily Work Goal',
                             subtitle:
@@ -78,34 +304,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             min: 1.0,
                             max: 12.0,
                             divisions: 22,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _workGoalHours = value;
                               });
+                              await SettingsService.setDailyGoal(value);
+                              if (mounted) {
+                                context.read<WorkTrackingBloc>().add(
+                                  LoadWorkEntries(),
+                                );
+                              }
+                              await _loadSettings();
                             },
                           ),
                           SettingsSwitchTile(
                             title: 'Auto Clock Out',
                             subtitle: 'Automatically clock out after 8 hours',
                             value: _autoClockOutEnabled,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _autoClockOutEnabled = value;
                               });
+                              await SettingsService.setAutoClockOutEnabled(
+                                value,
+                              );
                             },
                           ),
+                          // Break Duration Slider
                           SettingsSliderTile(
-                            title: 'Break Reminder',
+                            title: 'Default Break Duration',
                             subtitle:
-                                '${_breakReminderMinutes.round()} minutes',
-                            value: _breakReminderMinutes,
-                            min: 15.0,
-                            max: 120.0,
-                            divisions: 21,
-                            onChanged: (value) {
+                                'How long should your breaks be? (minutes)',
+                            value: _breakReminderMinutes.clamp(5, 30),
+                            min: 5,
+                            max: 30,
+                            divisions: 5,
+                            onChanged: (value) async {
                               setState(() {
                                 _breakReminderMinutes = value;
                               });
+                              await SettingsService.setBreakDuration(
+                                value.toInt(),
+                              );
                             },
                           ),
                         ],
@@ -123,59 +363,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             title: 'Enable Notifications',
                             subtitle: 'Receive work session reminders',
                             value: _notificationsEnabled,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _notificationsEnabled = value;
                               });
+                              await SettingsService.setNotificationsEnabled(
+                                value,
+                              );
                             },
                           ),
                           SettingsSwitchTile(
                             title: 'Sound',
                             subtitle: 'Play notification sounds',
                             value: _soundEnabled,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _soundEnabled = value;
                               });
+                              await SettingsService.setSoundEnabled(value);
                             },
                           ),
                           SettingsSwitchTile(
                             title: 'Vibration',
                             subtitle: 'Vibrate on notifications',
                             value: _vibrationEnabled,
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               setState(() {
                                 _vibrationEnabled = value;
                               });
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Appearance
-                      SettingsSection(
-                        title: 'Appearance',
-                        icon: Icons.palette_rounded,
-                        color: AppTheme.orange,
-                        children: [
-                          SettingsSwitchTile(
-                            title: 'Dark Mode',
-                            subtitle: 'Use dark theme',
-                            value: _darkModeEnabled,
-                            onChanged: (value) {
-                              setState(() {
-                                _darkModeEnabled = value;
-                              });
-                            },
-                          ),
-                          SettingsTile(
-                            title: 'Theme Colors',
-                            subtitle: 'Customize app colors',
-                            icon: Icons.color_lens_rounded,
-                            onTap: () {
-                              // TODO: Navigate to theme customization
+                              await SettingsService.setVibrationEnabled(value);
                             },
                           ),
                         ],
@@ -245,6 +461,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onTap: () {
                               // TODO: Navigate to support
                             },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Break End Sound
+                      SettingsSection(
+                        title: 'Break End Sound',
+                        icon: Icons.music_note_rounded,
+                        color: AppTheme.cyanBlue,
+                        children: [
+                          ..._soundOptions.map(
+                            (option) => ListTile(
+                              leading: Radio<String>(
+                                value: option['file']!,
+                                groupValue: _breakEndSound,
+                                onChanged: (value) async {
+                                  setState(() {
+                                    _breakEndSound = value!;
+                                  });
+                                  await SettingsService.setBreakEndSound(
+                                    value!,
+                                  );
+                                },
+                                activeColor: AppTheme.cyanBlue,
+                              ),
+                              title: Text(
+                                option['label']!,
+                                style: TextStyle(
+                                  color: AppTheme.primaryTextColor,
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  color: AppTheme.cyanBlue,
+                                ),
+                                onPressed: () async {
+                                  await _audioPlayer.stop();
+                                  await _audioPlayer.play(
+                                    AssetSource('sounds/${option['file']}'),
+                                  );
+                                },
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              tileColor: AppTheme.surfaceColor.withOpacity(0.3),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -431,9 +701,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: Implement reset app
+            onPressed: () async {
               Navigator.of(context).pop();
+              await SettingsService.resetToDefaults();
+              await _loadSettings();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('App settings reset'),
