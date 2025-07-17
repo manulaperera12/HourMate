@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../work_log/presentation/widgets/rounded_gradient_header.dart';
 
 class WeeklySummaryContent extends StatelessWidget {
   const WeeklySummaryContent({super.key});
@@ -59,7 +58,7 @@ class WeeklySummaryContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.neonYellowGreen.withOpacity(0.08),
+                color: AppTheme.neonYellowGreen.withValues(alpha: 0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -151,7 +150,7 @@ class _RatingChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.13),
+        color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -194,7 +193,7 @@ class WeeklySummaryScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.headerGradientStart.withOpacity(0.8),
+              AppTheme.headerGradientStart.withValues(alpha: 0.8),
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,

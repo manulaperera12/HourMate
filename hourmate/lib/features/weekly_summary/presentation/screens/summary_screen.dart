@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../work_log/presentation/widgets/rounded_gradient_header.dart';
+import '../../../../core/widgets/app_header.dart';
 import 'weekly_summary_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 enum SummaryFilter { workHours, tasks, productivity }
 
 class SummaryScreen extends StatefulWidget {
-  const SummaryScreen({super.key});
+  final bool showBackButton;
+  const SummaryScreen({super.key, this.showBackButton = false});
 
   @override
   State<SummaryScreen> createState() => _SummaryScreenState();
@@ -25,7 +26,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.headerGradientStart.withOpacity(0.8),
+              AppTheme.headerGradientStart.withValues(alpha: 0.8),
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,
@@ -36,7 +37,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const RoundedGradientHeader(title: 'Summary'),
+              AppHeader(
+                title: 'Summary',
+                subtitle: 'Visualize your weekly work stats',
+                showBackButton: widget.showBackButton,
+                onBack: () => Navigator.of(context).pop(),
+              ),
               const SizedBox(height: 12),
               _buildTabBar(context),
               const SizedBox(height: 16),
@@ -85,7 +91,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: isSelected
                     ? AppTheme.black
-                    : AppTheme.tabUnselected.withOpacity(0.7),
+                    : AppTheme.tabUnselected.withValues(alpha: 0.7),
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 fontSize: 16,
               ),
@@ -267,7 +273,7 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.neonYellowGreen.withOpacity(0.10),
+              color: AppTheme.neonYellowGreen.withValues(alpha: 0.10),
               blurRadius: 18,
               offset: const Offset(0, 6),
             ),
@@ -335,7 +341,7 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                         show: true,
                         drawVerticalLine: false,
                         getDrawingHorizontalLine: (value) => FlLine(
-                          color: AppTheme.dividerColor.withOpacity(0.18),
+                          color: AppTheme.dividerColor.withValues(alpha: 0.18),
                           strokeWidth: 1,
                         ),
                       ),
@@ -441,7 +447,7 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                                 (_selectedFilter == SummaryFilter.productivity
                                         ? AppTheme.cyanBlue
                                         : AppTheme.neonYellowGreen)
-                                    .withOpacity(0.18),
+                                    .withValues(alpha: 0.18),
                                 Colors.transparent,
                               ],
                               begin: Alignment.topCenter,
@@ -616,7 +622,7 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppTheme.neonYellowGreen.withOpacity(0.18),
+                    color: AppTheme.neonYellowGreen.withValues(alpha: 0.18),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -681,7 +687,7 @@ class _FilterChip extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppTheme.neonYellowGreen.withOpacity(0.18),
+                    color: AppTheme.neonYellowGreen.withValues(alpha: 0.18),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
