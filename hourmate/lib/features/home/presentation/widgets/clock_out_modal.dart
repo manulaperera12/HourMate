@@ -292,7 +292,12 @@ class _ClockOutModalState extends State<ClockOutModal> {
   }
 
   void _clockOut() {
-    context.read<WorkTrackingBloc>().add(ClockOut());
+    final bloc = context.read<WorkTrackingBloc>();
+    bloc.add(ClockOut());
     Navigator.pop(context);
+    // Delay to ensure modal is closed before reloading
+    Future.delayed(const Duration(milliseconds: 300), () {
+      bloc.add(LoadWorkEntries());
+    });
   }
 }

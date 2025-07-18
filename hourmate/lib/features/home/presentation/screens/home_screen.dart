@@ -25,6 +25,7 @@ import 'package:intl/intl.dart';
 import '../../../home/domain/entities/work_entry.dart';
 import '../../../../core/services/settings_service.dart';
 import '../widgets/break_timer_card.dart';
+import '../../data/datasources/work_entry_local_datasource.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool showBackButton;
@@ -76,9 +77,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCustomGoals();
-    context.read<WorkTrackingBloc>().add(LoadWorkEntries());
-    context.read<WorkTrackingBloc>().add(RestoreBreak());
+    // Clear corrupted work entry data on startup
+    WorkEntryLocalDataSource.clearCorruptedWorkEntries().then((_) {
+      _loadCustomGoals();
+      context.read<WorkTrackingBloc>().add(LoadWorkEntries());
+      context.read<WorkTrackingBloc>().add(RestoreBreak());
+    });
   }
 
   Future<void> _loadCustomGoals() async {
@@ -194,16 +198,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: BlocConsumer<WorkTrackingBloc, WorkTrackingState>(
             listener: (context, state) {
-              if (state is WorkTrackingError) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: AppTheme.errorColor,
-                  ),
-                );
-              }
+              // No SnackBar for WorkTrackingError
             },
             builder: (context, state) {
+              if (state is WorkTrackingError) {
+                // Show a loading indicator or fallback UI instead of error
+                return const Center(child: CircularProgressIndicator());
+              }
               if (state is! WorkTrackingLoaded) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -349,17 +350,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTodaySummary(List<dynamic> workEntries) {
+    // Defensive: filter out non-WorkEntry entries
+    final List<WorkEntry> safeEntries = workEntries
+        .where((e) => e is WorkEntry)
+        .cast<WorkEntry>()
+        .toList();
     final DateTime today = DateTime.now();
-    final List<dynamic> todayEntries = workEntries.where((entry) {
-      return entry.date.year == today.year &&
-          entry.date.month == today.month &&
-          entry.date.day == today.day;
+    final List<WorkEntry> todayEntries = safeEntries.where((entry) {
+      try {
+        return entry.date.year == today.year &&
+            entry.date.month == today.month &&
+            entry.date.day == today.day;
+      } catch (e) {
+        debugPrint('Error in todayEntries filter: $e');
+        return false;
+      }
     }).toList();
 
     double totalHours = 0.0;
     for (final entry in todayEntries) {
-      if (!entry.isActive) {
-        totalHours += entry.durationInHours;
+      try {
+        if (!entry.isActive) {
+          totalHours += (entry.durationInHours is int)
+              ? (entry.durationInHours as int).toDouble()
+              : entry.durationInHours;
+        }
+      } catch (e) {
+        debugPrint('Error summing totalHours: $e');
       }
     }
 
@@ -400,6 +417,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTabContent(int index, WorkTrackingState state) {
+    // Defensive: ensure state.workEntries is Iterable and filter out non-WorkEntry
+    final workEntries =
+        (state is WorkTrackingLoaded && state.workEntries is Iterable)
+        ? state.workEntries
+              .where((e) => e is WorkEntry)
+              .cast<WorkEntry>()
+              .toList()
+        : <WorkEntry>[];
     switch (index) {
       case 0: // Today
         List<DayProgress> weekProgress = _mockWeekProgress;
@@ -412,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final dailyGoal = state.dailyGoal;
           weekProgress = List.generate(7, (i) {
             final date = startOfWeek.add(Duration(days: i));
-            final hours = state.workEntries
+            final hours = workEntries
                 .where(
                   (entry) =>
                       entry.date.year == date.year &&
@@ -420,7 +445,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       entry.date.day == date.day &&
                       !entry.isActive,
                 )
-                .fold<double>(0.0, (sum, entry) => sum + entry.durationInHours);
+                .fold<double>(0.0, (sum, entry) {
+                  try {
+                    return sum +
+                        (entry.durationInHours is int
+                            ? (entry.durationInHours as int).toDouble()
+                            : entry.durationInHours);
+                  } catch (e) {
+                    debugPrint('Error in weekProgress fold: $e');
+                    return sum;
+                  }
+                });
             final percent = (dailyGoal > 0 ? (hours / dailyGoal) : 0.0).clamp(
               0.0,
               1.0,
@@ -434,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           });
           final DateTime today = DateTime.now();
-          final todayEntries = state.workEntries
+          final todayEntries = workEntries
               .where(
                 (entry) =>
                     entry.date.year == today.year &&
@@ -444,10 +479,14 @@ class _HomeScreenState extends State<HomeScreen> {
               )
               .toList();
           workedDuration = Duration(
-            minutes: todayEntries.fold<int>(
-              0,
-              (sum, entry) => sum + entry.durationInMinutes,
-            ),
+            minutes: todayEntries.fold<int>(0, (sum, entry) {
+              try {
+                return sum + (entry.durationInMinutes as num).toInt();
+              } catch (e) {
+                debugPrint('Error in workedDuration fold: $e');
+                return sum;
+              }
+            }),
           );
           goalDuration = Duration(hours: state.dailyGoal.round());
         }
@@ -535,7 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
               weekHours = 0.0;
               for (int i = 0; i < 7; i++) {
                 final date = startOfWeek.add(Duration(days: i));
-                final hours = state.workEntries
+                final hours = workEntries
                     .where(
                       (entry) =>
                           entry.date.year == date.year &&
@@ -545,7 +584,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                     .fold<double>(
                       0.0,
-                      (sum, entry) => sum + entry.durationInHours,
+                      (sum, entry) =>
+                          sum +
+                          (entry.durationInHours is int
+                              ? (entry.durationInHours as int).toDouble()
+                              : entry.durationInHours),
                     );
                 weekHours += hours;
               }

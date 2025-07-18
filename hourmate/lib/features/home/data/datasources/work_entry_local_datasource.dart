@@ -7,7 +7,30 @@ class WorkEntryLocalDataSource {
   Future<List<WorkEntryModel>> getAllEntries() async {
     final prefs = await SharedPreferences.getInstance();
     final entriesJson = prefs.getStringList(_workEntriesKey) ?? [];
-    return entriesJson.map((e) => WorkEntryModel.fromJson(e)).toList();
+    final List<WorkEntryModel> validModels = [];
+    for (final e in entriesJson) {
+      if (e is String) {
+        try {
+          final model = WorkEntryModel.fromJson(e);
+          if (model is WorkEntryModel) {
+            validModels.add(model);
+          }
+        } catch (_) {
+          // Skip corrupted entry
+          continue;
+        }
+      }
+    }
+    return validModels;
+  }
+
+  /// Call this to clear corrupted work entry data (e.g., if error persists)
+  static Future<void> clearCorruptedWorkEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final entriesJson = prefs.get(_workEntriesKey);
+    if (entriesJson is! List<String>) {
+      await prefs.remove(_workEntriesKey);
+    }
   }
 
   Future<void> addEntry(WorkEntryModel entry) async {
