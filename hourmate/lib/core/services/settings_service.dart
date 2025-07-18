@@ -134,10 +134,19 @@ class SettingsService {
         .toList();
   }
 
-  static Future<void> addCustomGoal(String title) async {
+  static Future<void> addCustomGoal(
+    String title, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final goals = await getCustomGoals();
-    goals.add({'title': title, 'completed': false});
+    goals.add({
+      'title': title,
+      'completed': false,
+      'startDate': startDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+    });
     await prefs.setStringList(
       _customGoalsKey,
       goals.map((g) => json.encode(g)).toList(),
@@ -148,12 +157,17 @@ class SettingsService {
     int index, {
     String? title,
     bool? completed,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final goals = await getCustomGoals();
     if (index >= 0 && index < goals.length) {
       if (title != null) goals[index]['title'] = title;
       if (completed != null) goals[index]['completed'] = completed;
+      if (startDate != null)
+        goals[index]['startDate'] = startDate.toIso8601String();
+      if (endDate != null) goals[index]['endDate'] = endDate.toIso8601String();
       await prefs.setStringList(
         _customGoalsKey,
         goals.map((g) => json.encode(g)).toList(),
@@ -198,6 +212,13 @@ class SettingsService {
   }
 
   static Future<void> startBreak(DateTime start, int durationMinutes) async {
+    print(
+      'Starting break at ' +
+          start.toString() +
+          ' for ' +
+          durationMinutes.toString() +
+          ' minutes',
+    );
     final prefs = await SharedPreferences.getInstance();
     final breaks = await getAllBreaksRaw();
     breaks.add({
@@ -237,6 +258,12 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     final startStr = prefs.getString('active_break_start');
     final duration = prefs.getInt('active_break_duration');
+    print(
+      'getActiveBreak: startStr=' +
+          startStr.toString() +
+          ', duration=' +
+          duration.toString(),
+    );
     if (startStr != null && duration != null) {
       final start = DateTime.tryParse(startStr);
       if (start != null) {

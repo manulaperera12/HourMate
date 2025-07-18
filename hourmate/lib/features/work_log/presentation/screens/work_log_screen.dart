@@ -80,7 +80,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
           }
 
           IconData ratingIcon(String rating) {
-            switch (rating) {
+            switch (rating.toLowerCase()) {
               case 'good':
                 return Icons.sentiment_satisfied_alt_rounded;
               case 'average':
@@ -93,7 +93,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
           }
 
           Color ratingColor(String rating) {
-            switch (rating) {
+            switch (rating.toLowerCase()) {
               case 'good':
                 return AppTheme.goodRatingColor;
               case 'average':

@@ -6,19 +6,140 @@ import '../widgets/profile_stats_card.dart';
 import '../widgets/profile_achievement_card.dart';
 import '../widgets/profile_info_card.dart';
 import '../widgets/profile_action_button.dart';
+import '../../domain/entities/achievement.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/achievements_cubit.dart';
+import 'package:excel/excel.dart' as xls;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import '../../../home/data/datasources/work_entry_local_datasource.dart';
+import '../../../../core/services/settings_service.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   final bool showBackButton;
-
   const ProfileScreen({super.key, this.showBackButton = false});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => AchievementsCubit()..loadAchievements(),
+      child: _ProfileScreenContent(showBackButton: showBackButton),
+    );
+  }
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenContent extends StatefulWidget {
+  final bool showBackButton;
+  const _ProfileScreenContent({Key? key, required this.showBackButton})
+    : super(key: key);
+
+  @override
+  State<_ProfileScreenContent> createState() => _ProfileScreenContentState();
+}
+
+class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   Map<String, dynamic> _userData = {};
   bool _isLoading = true;
+
+  // --- Export Data Methods ---
+  void _exportData(String format) async {
+    final workEntries = await _getAllWorkEntries();
+    final customGoals = await SettingsService.getCustomGoals();
+    final breaks = await SettingsService.getAllBreaksRaw();
+    final settings = await SettingsService.getAllSettings();
+    final profile = await _getProfileData();
+
+    final exportData = {
+      'workEntries': workEntries,
+      'customGoals': customGoals,
+      'breaks': breaks,
+      'settings': settings,
+      'profile': profile,
+    };
+
+    if (format == 'excel') {
+      await _exportToExcel(exportData);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getAllWorkEntries() async {
+    final dataSource = WorkEntryLocalDataSource();
+    final entries = await dataSource.getAllWorkEntries();
+    return entries.map((e) => e.toMap()).toList();
+  }
+
+  Future<Map<String, dynamic>> _getProfileData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'name': prefs.getString('user_name') ?? 'User',
+      'email': prefs.getString('user_email') ?? 'user@email.com',
+      'position': prefs.getString('user_position') ?? 'Professional',
+      'company': prefs.getString('user_company') ?? 'Company',
+      'avatar': prefs.getString('user_avatar') ?? 'U',
+      'joinDate': prefs.getString('join_date'),
+      'totalHours': prefs.getDouble('total_hours') ?? 0.0,
+      'totalSessions': prefs.getInt('total_sessions') ?? 0,
+      'averageRating': prefs.getDouble('average_rating') ?? 0.0,
+      'streakDays': prefs.getInt('streak_days') ?? 0,
+      'level': prefs.getInt('level') ?? 1,
+      'experience': prefs.getInt('experience') ?? 0,
+      'nextLevel': prefs.getInt('next_level') ?? 100,
+    };
+  }
+
+  Future<void> _exportToExcel(Map<String, dynamic> exportData) async {
+    final excel = xls.Excel.createExcel();
+    final workSheet = excel['Work Entries'];
+    final workEntries = exportData['workEntries'] as List<dynamic>;
+    if (workEntries.isNotEmpty) {
+      workSheet.appendRow(workEntries.first.keys.toList());
+      for (final entry in workEntries) {
+        workSheet.appendRow(entry.values.toList());
+      }
+    } else {
+      workSheet.appendRow(['No work entries found']);
+    }
+    final goalsSheet = excel['Goals'];
+    final goals = exportData['customGoals'] as List<dynamic>;
+    if (goals.isNotEmpty) {
+      goalsSheet.appendRow(goals.first.keys.toList());
+      for (final goal in goals) {
+        goalsSheet.appendRow(goal.values.toList());
+      }
+    } else {
+      goalsSheet.appendRow(['No goals found']);
+    }
+    final breaksSheet = excel['Breaks'];
+    final breaks = exportData['breaks'] as List<dynamic>;
+    if (breaks.isNotEmpty) {
+      breaksSheet.appendRow(breaks.first.keys.toList());
+      for (final brk in breaks) {
+        breaksSheet.appendRow(brk.values.toList());
+      }
+    } else {
+      breaksSheet.appendRow(['No breaks found']);
+    }
+    final settingsSheet = excel['Settings'];
+    final settings = exportData['settings'] as Map<String, dynamic>;
+    settingsSheet.appendRow(['Setting', 'Value']);
+    settings.forEach((key, value) {
+      settingsSheet.appendRow([key, value.toString()]);
+    });
+    final profileSheet = excel['Profile'];
+    final profile = exportData['profile'] as Map<String, dynamic>;
+    profileSheet.appendRow(['Field', 'Value']);
+    profile.forEach((key, value) {
+      profileSheet.appendRow([key, value.toString()]);
+    });
+    final bytes = excel.encode();
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      '${dir.path}/hourmate_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+    );
+    await file.writeAsBytes(bytes!);
+    await Share.shareXFiles([XFile(file.path)], text: 'HourMate Data Export');
+  }
 
   @override
   void initState() {
@@ -91,40 +212,155 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  final List<Map<String, dynamic>> _achievements = [
-    {
-      'title': 'Early Bird',
-      'description': 'Start work before 8 AM for 7 days',
-      'icon': Icons.wb_sunny_rounded,
-      'color': AppTheme.neonYellowGreen,
-      'unlocked': true,
-      'progress': 1.0,
-    },
-    {
-      'title': 'Focus Master',
-      'description': 'Complete 50 tasks with 90%+ productivity',
-      'icon': Icons.psychology_rounded,
-      'color': AppTheme.cyanBlue,
-      'unlocked': true,
-      'progress': 1.0,
-    },
-    {
-      'title': 'Consistency King',
-      'description': 'Work 30 consecutive days',
-      'icon': Icons.local_fire_department_rounded,
-      'color': AppTheme.orange,
-      'unlocked': false,
-      'progress': 0.93,
-    },
-    {
-      'title': 'Task Crusher',
-      'description': 'Complete 100 tasks in a month',
-      'icon': Icons.check_circle_rounded,
-      'color': AppTheme.neonYellowGreen,
-      'unlocked': false,
-      'progress': 0.67,
-    },
-  ];
+  Future<void> _showEditProfileSheet() async {
+    final prefs = await SharedPreferences.getInstance();
+    final nameController = TextEditingController(text: _userData['name']);
+    final emailController = TextEditingController(text: _userData['email']);
+    final positionController = TextEditingController(
+      text: _userData['position'],
+    );
+    final companyController = TextEditingController(text: _userData['company']);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppTheme.cardColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, -8),
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: AppTheme.disabledTextColor.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    'Edit Profile',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: positionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Position',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: companyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Company',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.neonYellowGreen,
+                        foregroundColor: AppTheme.black,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () async {
+                        await prefs.setString(
+                          'user_name',
+                          nameController.text.trim(),
+                        );
+                        await prefs.setString(
+                          'user_email',
+                          emailController.text.trim(),
+                        );
+                        await prefs.setString(
+                          'user_position',
+                          positionController.text.trim(),
+                        );
+                        await prefs.setString(
+                          'user_company',
+                          companyController.text.trim(),
+                        );
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                          _loadUserData();
+                        }
+                      },
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -403,64 +639,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             stops: const [0.0, 0.5, 1.0],
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            Row(
+                        child: BlocBuilder<AchievementsCubit, List<Achievement>>(
+                          builder: (context, achievements) {
+                            return Column(
                               children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.orange.withValues(
-                                      alpha: 0.13,
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.orange.withValues(
+                                          alpha: 0.13,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.emoji_events_rounded,
+                                        color: AppTheme.orange,
+                                        size: 24,
+                                      ),
                                     ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.emoji_events_rounded,
-                                    color: AppTheme.orange,
-                                    size: 24,
-                                  ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Achievements',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      AppTheme.primaryTextColor,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${achievements.where((a) => a.unlocked).length}/${achievements.length} unlocked',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: AppTheme
+                                                      .secondaryTextColor,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Achievements',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.primaryTextColor,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${_achievements.where((a) => a['unlocked']).length}/${_achievements.length} unlocked',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color:
-                                                  AppTheme.secondaryTextColor,
-                                            ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 20),
+                                ...achievements.map(
+                                  (achievement) => ProfileAchievementCard(
+                                    achievement: {
+                                      'title': achievement.title,
+                                      'description': achievement.description,
+                                      'icon': achievement.icon,
+                                      'color': achievement.color,
+                                      'unlocked': achievement.unlocked,
+                                      'progress': achievement.progress,
+                                    },
                                   ),
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 20),
-                            ..._achievements.map(
-                              (achievement) => ProfileAchievementCard(
-                                achievement: achievement,
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
 
@@ -472,9 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Update your information',
                         icon: Icons.edit_rounded,
                         color: AppTheme.neonYellowGreen,
-                        onTap: () {
-                          // TODO: Navigate to edit profile
-                        },
+                        onTap: _showEditProfileSheet,
                       ),
 
                       const SizedBox(height: 12),
@@ -485,7 +731,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: Icons.download_rounded,
                         color: AppTheme.cyanBlue,
                         onTap: () {
-                          // TODO: Export data functionality
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) {
+                              return DraggableScrollableSheet(
+                                initialChildSize: 0.35,
+                                minChildSize: 0.2,
+                                maxChildSize: 0.7,
+                                expand: false,
+                                builder: (context, scrollController) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.cardColor,
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(28),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 24,
+                                          offset: const Offset(0, -8),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: EdgeInsets.only(
+                                      left: 24,
+                                      right: 24,
+                                      top: 24,
+                                      bottom:
+                                          MediaQuery.of(
+                                            context,
+                                          ).viewInsets.bottom +
+                                          24,
+                                    ),
+                                    child: ListView(
+                                      controller: scrollController,
+                                      children: [
+                                        Center(
+                                          child: Container(
+                                            width: 48,
+                                            height: 5,
+                                            margin: const EdgeInsets.only(
+                                              bottom: 18,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.disabledTextColor
+                                                  .withOpacity(0.3),
+                                              borderRadius:
+                                                  BorderRadius.circular(3),
+                                            ),
+                                          ),
+                                        ),
+                                        const Text(
+                                          'Export Data',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 22,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'Download all your work entries, goals, breaks, settings, and profile as an Excel file.',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 24),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            icon: const Icon(
+                                              Icons.download_rounded,
+                                            ),
+                                            label: const Text(
+                                              'Download as Excel',
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.cyanBlue,
+                                              foregroundColor: AppTheme.black,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              Navigator.of(context).pop();
+                                              _exportData('excel');
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
                         },
                       ),
 

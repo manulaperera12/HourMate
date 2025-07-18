@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/productivity_calculator.dart';
 import '../../../weekly_summary/presentation/screens/summary_screen.dart';
 import '../blocs/work_tracking_bloc.dart';
 import '../widgets/clock_in_out_button.dart';
@@ -14,6 +15,8 @@ import '../widgets/home_tab_bar.dart';
 import '../widgets/horizontal_progress_list.dart';
 import '../widgets/today_progress_circle.dart';
 import '../widgets/stats_row.dart';
+import '../widgets/goal_modal.dart';
+import '../widgets/productivity_insights_card.dart';
 import '../../../work_log/presentation/screens/work_log_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
@@ -39,7 +42,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedTab = 0;
   List<Map<String, dynamic>> _customGoals = [];
-  int _breakDuration = 15; // default, will be loaded from settings
+  DateTime? _filterStartDate;
+  DateTime? _filterEndDate;
+  bool _showDateFilter = false;
 
   // Mock week progress data
   final List<DayProgress> _mockWeekProgress = [
@@ -72,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadCustomGoals();
-    _loadBreakDuration();
     context.read<WorkTrackingBloc>().add(LoadWorkEntries());
     context.read<WorkTrackingBloc>().add(RestoreBreak());
   }
@@ -84,11 +88,90 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _loadBreakDuration() async {
-    final duration = await SettingsService.getBreakDuration();
-    setState(() {
-      _breakDuration = duration;
-    });
+  List<Map<String, dynamic>> _getFilteredGoals() {
+    if (!_showDateFilter ||
+        (_filterStartDate == null && _filterEndDate == null)) {
+      return _customGoals;
+    }
+
+    return _customGoals.where((goal) {
+      final goalStartDate = goal['startDate'] != null
+          ? DateTime.tryParse(goal['startDate'])
+          : null;
+      final goalEndDate = goal['endDate'] != null
+          ? DateTime.tryParse(goal['endDate'])
+          : null;
+
+      // If goal has no dates, include it
+      if (goalStartDate == null && goalEndDate == null) {
+        return true;
+      }
+
+      // Check if goal overlaps with filter range
+      if (_filterStartDate != null && _filterEndDate != null) {
+        // Filter has both start and end dates
+        if (goalStartDate != null && goalEndDate != null) {
+          // Goal has both dates - check overlap
+          return !(goalEndDate.isBefore(_filterStartDate!) ||
+              goalStartDate.isAfter(_filterEndDate!));
+        } else if (goalStartDate != null) {
+          // Goal has only start date
+          return !goalStartDate.isAfter(_filterEndDate!);
+        } else if (goalEndDate != null) {
+          // Goal has only end date
+          return !goalEndDate.isBefore(_filterStartDate!);
+        }
+      } else if (_filterStartDate != null) {
+        // Filter has only start date
+        if (goalEndDate != null) {
+          return !goalEndDate.isBefore(_filterStartDate!);
+        }
+      } else if (_filterEndDate != null) {
+        // Filter has only end date
+        if (goalStartDate != null) {
+          return !goalStartDate.isAfter(_filterEndDate!);
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  Future<void> _selectFilterDate(BuildContext context, bool isStartDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStartDate
+          ? (_filterStartDate ?? DateTime.now())
+          : (_filterEndDate ?? DateTime.now()),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppTheme.neonYellowGreen,
+              onPrimary: Colors.black,
+              surface: AppTheme.cardColor,
+              onSurface: AppTheme.primaryTextColor,
+            ),
+            dialogBackgroundColor: AppTheme.backgroundColor,
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _filterStartDate = picked;
+          if (_filterEndDate != null && _filterEndDate!.isBefore(picked)) {
+            _filterEndDate = null;
+          }
+        } else {
+          _filterEndDate = picked;
+        }
+      });
+    }
   }
 
   @override
@@ -123,12 +206,9 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             builder: (context, state) {
-              if (state is WorkTrackingLoading) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    color: AppTheme.primaryColor,
-                  ),
-                );
+              if (state is! WorkTrackingLoaded) {
+                // Show loading indicator until state is fully restored
+                return const Center(child: CircularProgressIndicator());
               }
 
               if (state is WorkTrackingLoaded) {
@@ -191,36 +271,57 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _navigateToWeeklySummary(),
                                 ),
                               ),
-                              // Break Timer Card
-                              BreakTimerCard(
-                                isOnBreak: state.isOnBreak,
-                                breakDurationMinutes:
-                                    state.breakDurationMinutes,
-                                breakElapsedSeconds: state.breakElapsedSeconds,
-                                breakRemainingSeconds:
-                                    state.breakRemainingSeconds,
-                                defaultDuration:
-                                    state.breakDurationMinutes ??
-                                    _breakDuration,
-                                onDurationChanged: (v) {
-                                  setState(() {
-                                    _breakDuration = v;
-                                  });
-                                },
-                                onStartBreak: () {
-                                  context.read<WorkTrackingBloc>().add(
-                                    StartBreak(durationMinutes: _breakDuration),
+                              // Break Timer Section
+                              Builder(
+                                builder: (context) {
+                                  final state = context
+                                      .watch<WorkTrackingBloc>()
+                                      .state;
+                                  if (state is! WorkTrackingLoaded) {
+                                    // Show loader until break state is fully restored
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 32,
+                                      ),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return BreakTimerCard(
+                                    isOnBreak: state.isOnBreak,
+                                    breakDurationMinutes:
+                                        state.breakDurationMinutes,
+                                    breakElapsedSeconds:
+                                        state.breakElapsedSeconds,
+                                    breakRemainingSeconds:
+                                        state.breakRemainingSeconds,
+                                    defaultDuration:
+                                        state.breakDurationMinutes ?? 15,
+                                    onDurationChanged: (v) {
+                                      context.read<WorkTrackingBloc>().add(
+                                        UpdateBreakDuration(durationMinutes: v),
+                                      );
+                                    },
+                                    onStartBreak: () {
+                                      if (!(state.isOnBreak ?? false)) {
+                                        context.read<WorkTrackingBloc>().add(
+                                          StartBreak(
+                                            durationMinutes:
+                                                state.breakDurationMinutes ??
+                                                15,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    onEndBreak: () {
+                                      context.read<WorkTrackingBloc>().add(
+                                        const EndBreak(),
+                                      );
+                                    },
                                   );
-                                },
-                                onEndBreak: () async {
-                                  context.read<WorkTrackingBloc>().add(
-                                    const EndBreak(),
-                                  );
-                                  final duration =
-                                      await SettingsService.getBreakDuration();
-                                  setState(() {
-                                    _breakDuration = duration;
-                                  });
                                 },
                               ),
                               // Today's Work Summary
@@ -381,25 +482,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? '${workedDuration.inHours}:${(workedDuration.inMinutes % 60).toString().padLeft(2, '0')}'
                   : '${workedDuration.inMinutes} min';
               final tasksDone = todayEntries.length;
-              int productivityScore = 0;
-              if (todayEntries.isNotEmpty) {
-                final scores = todayEntries.map((e) {
-                  switch (e.taskRating.toLowerCase()) {
-                    case 'good':
-                      return 100;
-                    case 'average':
-                      return 70;
-                    case 'bad':
-                      return 40;
-                    default:
-                      return 70;
-                  }
-                }).toList();
-                productivityScore =
-                    (scores.reduce((a, b) => a + b) / scores.length).round();
-              } else {
-                productivityScore = 70;
-              }
+
+              // Use advanced productivity calculation
+              final productivityInsights =
+                  ProductivityCalculator.getProductivityInsights(
+                    todayEntries,
+                    goalDuration.inHours.toDouble(),
+                  );
+              final productivityScore = (productivityInsights['score'] as num)
+                  .toInt();
               return Column(
                 children: [
                   HorizontalProgressList(weekProgress: weekProgress),
@@ -418,6 +509,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           tasksDone: tasksDone,
                           productivityScore: productivityScore,
                         ),
+                        const SizedBox(height: 20),
+                        ProductivityInsightsCard(
+                          entries: todayEntries,
+                          dailyGoal: goalDuration.inHours.toDouble(),
+                        ),
                       ],
                     ),
                   ),
@@ -427,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       case 1: // Plans
-        final TextEditingController _goalController = TextEditingController();
+
         return FutureBuilder<double>(
           future: SettingsService.getWeeklyGoal(),
           builder: (context, snapshot) {
@@ -506,78 +602,229 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Custom Goals/Tasks
+                    // Goals & Tasks Section
                     Container(
                       padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(top: 12),
                       decoration: BoxDecoration(
-                        color: AppTheme.tabBarBg.withValues(alpha: 0.5),
+                        color: AppTheme.cardColor,
                         borderRadius: BorderRadius.circular(20),
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 1.0,
+                          colors: [
+                            const Color(0xFF2C2C2C),
+                            const Color(0xFF1A1A1A).withValues(alpha: 0.5),
+                            const Color(0xFF0D0D0D).withValues(alpha: 0.0),
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Your Goals & Tasks',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryTextColor,
+                          Row(
+                            children: [
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.neonYellowGreen,
+                                  shape: BoxShape.circle,
                                 ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppTheme.surfaceColor.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _goalController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Add a new goal/task',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.transparent,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Goals & Tasks',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: AppTheme.neonYellowGreen,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
                                     ),
-                                    style: TextStyle(
-                                      color: AppTheme.primaryTextColor,
-                                    ),
-                                  ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: Icon(
+                                  _showDateFilter
+                                      ? Icons.filter_alt
+                                      : Icons.filter_alt_outlined,
+                                  color: AppTheme.cyanBlue,
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: AppTheme.neonYellowGreen,
-                                  ),
-                                  onPressed: () async {
-                                    final text = _goalController.text.trim();
-                                    if (text.isNotEmpty) {
-                                      await SettingsService.addCustomGoal(text);
-                                      _goalController.clear();
-                                      await _loadCustomGoals();
-                                      setState(() {});
+                                onPressed: () {
+                                  setState(() {
+                                    _showDateFilter = !_showDateFilter;
+                                    if (!_showDateFilter) {
+                                      _filterStartDate = null;
+                                      _filterEndDate = null;
                                     }
-                                  },
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: AppTheme.neonYellowGreen,
                                 ),
-                              ],
-                            ),
+                                onPressed: () => _showAddGoalModal(context),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          if (_showDateFilter) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceColor.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () =>
+                                              _selectFilterDate(context, true),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: AppTheme
+                                                    .secondaryTextColor
+                                                    .withValues(alpha: 0.3),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.calendar_today,
+                                                  size: 16,
+                                                  color:
+                                                      AppTheme.neonYellowGreen,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    _filterStartDate != null
+                                                        ? DateFormat(
+                                                            'MMM dd, yyyy',
+                                                          ).format(
+                                                            _filterStartDate!,
+                                                          )
+                                                        : 'Start Date',
+                                                    style: TextStyle(
+                                                      color:
+                                                          _filterStartDate !=
+                                                              null
+                                                          ? AppTheme
+                                                                .primaryTextColor
+                                                          : AppTheme
+                                                                .secondaryTextColor,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () =>
+                                              _selectFilterDate(context, false),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: AppTheme
+                                                    .secondaryTextColor
+                                                    .withValues(alpha: 0.3),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.event,
+                                                  size: 16,
+                                                  color: AppTheme.cyanBlue,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    _filterEndDate != null
+                                                        ? DateFormat(
+                                                            'MMM dd, yyyy',
+                                                          ).format(
+                                                            _filterEndDate!,
+                                                          )
+                                                        : 'End Date',
+                                                    style: TextStyle(
+                                                      color:
+                                                          _filterEndDate != null
+                                                          ? AppTheme
+                                                                .primaryTextColor
+                                                          : AppTheme
+                                                                .secondaryTextColor,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (_filterStartDate != null ||
+                                      _filterEndDate != null) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                _filterStartDate = null;
+                                                _filterEndDate = null;
+                                              });
+                                            },
+                                            child: Text(
+                                              'Clear Filter',
+                                              style: TextStyle(
+                                                color: AppTheme.errorColor,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${_getFilteredGoals().length} goals',
+                                          style: TextStyle(
+                                            color: AppTheme.secondaryTextColor,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
                           if (_customGoals.isEmpty)
                             Padding(
                               padding: const EdgeInsets.symmetric(
@@ -592,9 +839,23 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             )
                           else
-                            ..._customGoals.asMap().entries.map((entry) {
-                              final i = entry.key;
+                            ..._getFilteredGoals().asMap().entries.map((entry) {
+                              final filteredIndex = entry.key;
                               final goal = entry.value;
+                              // Find the original index in _customGoals
+                              final originalIndex = _customGoals.indexWhere(
+                                (g) => g['title'] == goal['title'],
+                              );
+                              final i = originalIndex >= 0
+                                  ? originalIndex
+                                  : filteredIndex;
+                              final startDate = goal['startDate'] != null
+                                  ? DateTime.tryParse(goal['startDate'])
+                                  : null;
+                              final endDate = goal['endDate'] != null
+                                  ? DateTime.tryParse(goal['endDate'])
+                                  : null;
+
                               return Container(
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 decoration: BoxDecoration(
@@ -605,55 +866,177 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : AppTheme.surfaceColor.withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Row(
+                                child: Column(
                                   children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        goal['completed'] == true
-                                            ? Icons.check_circle
-                                            : Icons.radio_button_unchecked,
-                                        color: goal['completed'] == true
-                                            ? AppTheme.neonYellowGreen
-                                            : AppTheme.disabledTextColor,
-                                      ),
-                                      onPressed: () async {
-                                        await SettingsService.updateCustomGoal(
-                                          i,
-                                          completed:
-                                              !(goal['completed'] == true),
-                                        );
-                                        await _loadCustomGoals();
-                                        setState(() {});
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        goal['title'] ?? '',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyLarge
-                                            ?.copyWith(
-                                              decoration:
-                                                  goal['completed'] == true
-                                                  ? TextDecoration.lineThrough
-                                                  : null,
-                                              color: AppTheme.primaryTextColor,
-                                              fontWeight: FontWeight.w500,
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            goal['completed'] == true
+                                                ? Icons.check_circle
+                                                : Icons.radio_button_unchecked,
+                                            color: goal['completed'] == true
+                                                ? AppTheme.neonYellowGreen
+                                                : AppTheme.disabledTextColor,
+                                          ),
+                                          onPressed: () async {
+                                            await SettingsService.updateCustomGoal(
+                                              i,
+                                              completed:
+                                                  !(goal['completed'] == true),
+                                            );
+                                            await _loadCustomGoals();
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                goal['title'] ?? '',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyLarge
+                                                    ?.copyWith(
+                                                      decoration:
+                                                          goal['completed'] ==
+                                                              true
+                                                          ? TextDecoration
+                                                                .lineThrough
+                                                          : null,
+                                                      color: AppTheme
+                                                          .primaryTextColor,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                              ),
+                                              if (startDate != null ||
+                                                  endDate != null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 4,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      if (startDate !=
+                                                          null) ...[
+                                                        Icon(
+                                                          Icons.calendar_today,
+                                                          size: 12,
+                                                          color: AppTheme
+                                                              .secondaryTextColor,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          DateFormat(
+                                                            'MMM dd',
+                                                          ).format(startDate!),
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: AppTheme
+                                                                .secondaryTextColor,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      if (startDate != null &&
+                                                          endDate != null)
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 4,
+                                                              ),
+                                                          child: Text(
+                                                            '→',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: AppTheme
+                                                                  .secondaryTextColor,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      if (endDate != null) ...[
+                                                        Icon(
+                                                          Icons.event,
+                                                          size: 12,
+                                                          color: AppTheme
+                                                              .secondaryTextColor,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          DateFormat(
+                                                            'MMM dd',
+                                                          ).format(endDate!),
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: AppTheme
+                                                                .secondaryTextColor,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuButton<String>(
+                                          icon: const Icon(
+                                            Icons.more_vert,
+                                            color: AppTheme.secondaryTextColor,
+                                          ),
+                                          onSelected: (value) async {
+                                            if (value == 'edit') {
+                                              _showEditGoalModal(
+                                                context,
+                                                i,
+                                                goal,
+                                              );
+                                            } else if (value == 'delete') {
+                                              await SettingsService.removeCustomGoal(
+                                                i,
+                                              );
+                                              await _loadCustomGoals();
+                                              setState(() {});
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'edit',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.edit,
+                                                    color: AppTheme
+                                                        .neonYellowGreen,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('Edit'),
+                                                ],
+                                              ),
                                             ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: AppTheme.errorColor,
-                                      ),
-                                      onPressed: () async {
-                                        await SettingsService.removeCustomGoal(
-                                          i,
-                                        );
-                                        await _loadCustomGoals();
-                                        setState(() {});
-                                      },
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.delete,
+                                                    color: AppTheme.errorColor,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('Delete'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -726,26 +1109,17 @@ class _HomeScreenState extends State<HomeScreen> {
               String peakHourLabel = peakHour >= 0
                   ? '${peakHour.toString().padLeft(2, '0')}:00 - ${(peakHour + 1).toString().padLeft(2, '0')}:00'
                   : 'N/A';
-              // Focus Score: same as StatsRow
-              int productivityScore = 0;
-              if (todayEntries.isNotEmpty) {
-                final scores = todayEntries.map((e) {
-                  switch (e.taskRating.toLowerCase()) {
-                    case 'good':
-                      return 100;
-                    case 'average':
-                      return 70;
-                    case 'bad':
-                      return 40;
-                    default:
-                      return 70;
-                  }
-                }).toList();
-                productivityScore =
-                    (scores.reduce((a, b) => a + b) / scores.length).round();
-              } else {
-                productivityScore = 70;
-              }
+              // Use advanced productivity calculation for Focus Score
+              final dailyGoal = (state is WorkTrackingLoaded)
+                  ? state.dailyGoal
+                  : 8.0;
+              final productivityInsights =
+                  ProductivityCalculator.getProductivityInsights(
+                    todayEntries,
+                    dailyGoal,
+                  );
+              final productivityScore = (productivityInsights['score'] as num)
+                  .toInt();
               final tasksDone = todayEntries.length;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1022,7 +1396,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const SettingsScreen(showBackButton: true),
+        builder: (context) => SettingsScreen(
+          showBackButton: true,
+          getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+        ),
       ),
     );
   }
@@ -1033,5 +1410,74 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => const ProfileScreen(showBackButton: true),
       ),
     );
+  }
+
+  void _showAddGoalModal(BuildContext context) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GoalModal(),
+    );
+
+    if (result != null) {
+      final startDate = result['startDate'] != null
+          ? DateTime.tryParse(result['startDate'])
+          : null;
+      final endDate = result['endDate'] != null
+          ? DateTime.tryParse(result['endDate'])
+          : null;
+
+      await SettingsService.addCustomGoal(
+        result['title'],
+        startDate: startDate,
+        endDate: endDate,
+      );
+      await _loadCustomGoals();
+      setState(() {});
+    }
+  }
+
+  void _showEditGoalModal(
+    BuildContext context,
+    int index,
+    Map<String, dynamic> goal,
+  ) async {
+    final startDate = goal['startDate'] != null
+        ? DateTime.tryParse(goal['startDate'])
+        : null;
+    final endDate = goal['endDate'] != null
+        ? DateTime.tryParse(goal['endDate'])
+        : null;
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GoalModal(
+        initialTitle: goal['title'],
+        initialStartDate: startDate,
+        initialEndDate: endDate,
+        isEditing: true,
+      ),
+    );
+
+    if (result != null) {
+      final newStartDate = result['startDate'] != null
+          ? DateTime.tryParse(result['startDate'])
+          : null;
+      final newEndDate = result['endDate'] != null
+          ? DateTime.tryParse(result['endDate'])
+          : null;
+
+      await SettingsService.updateCustomGoal(
+        index,
+        title: result['title'],
+        startDate: newStartDate,
+        endDate: newEndDate,
+      );
+      await _loadCustomGoals();
+      setState(() {});
+    }
   }
 }

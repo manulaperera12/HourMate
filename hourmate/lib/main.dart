@@ -15,6 +15,7 @@ import 'features/work_log/presentation/screens/work_log_screen.dart';
 import 'features/weekly_summary/presentation/screens/summary_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/onboarding/presentation/screens/get_started_screen.dart';
+import 'features/profile/presentation/blocs/achievements_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,13 +57,20 @@ class MyApp extends StatelessWidget {
     final GetWeeklySummaryUseCase getWeeklySummaryUseCase =
         GetWeeklySummaryUseCase(repository: repository);
 
-    return BlocProvider(
-      create: (context) => WorkTrackingBloc(
-        clockInUseCase: clockInUseCase,
-        clockOutUseCase: clockOutUseCase,
-        getWorkEntriesUseCase: getWorkEntriesUseCase,
-        getWeeklySummaryUseCase: getWeeklySummaryUseCase,
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => WorkTrackingBloc(
+            clockInUseCase: clockInUseCase,
+            clockOutUseCase: clockOutUseCase,
+            getWorkEntriesUseCase: getWorkEntriesUseCase,
+            getWeeklySummaryUseCase: getWeeklySummaryUseCase,
+          ),
+        ),
+        BlocProvider(
+          create: (context) => AchievementsCubit()..loadAchievements(),
+        ),
+      ],
       child: MaterialApp(
         title: 'HourMate',
         theme: AppTheme.lightTheme,
@@ -182,16 +190,25 @@ class _MainScaffoldState extends State<MainScaffold> {
   void initState() {
     super.initState();
     _screens = [
-      HomeScreen(
-        showBackButton: false,
-        getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+      _KeepAliveWrapper(
+        child: HomeScreen(
+          showBackButton: false,
+          getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+        ),
       ),
-      WorkLogScreen(
-        showBackButton: false,
-        getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+      _KeepAliveWrapper(
+        child: WorkLogScreen(
+          showBackButton: false,
+          getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+        ),
       ),
-      SummaryScreen(showBackButton: false),
-      SettingsScreen(showBackButton: false),
+      _KeepAliveWrapper(child: SummaryScreen(showBackButton: false)),
+      _KeepAliveWrapper(
+        child: SettingsScreen(
+          showBackButton: false,
+          getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
+        ),
+      ),
     ];
   }
 
@@ -258,4 +275,24 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
     );
   }
+}
+
+class _KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  const _KeepAliveWrapper({Key? key, required this.child}) : super(key: key);
+
+  @override
+  State<_KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<_KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
 }
