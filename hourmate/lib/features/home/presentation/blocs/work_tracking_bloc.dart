@@ -8,6 +8,10 @@ import '../../domain/usecases/get_work_entries_usecase.dart';
 import '../../domain/usecases/get_weekly_summary_usecase.dart';
 import '../../../../core/services/settings_service.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
+import '../../../profile/presentation/blocs/achievements_cubit.dart';
+import '../../../profile/data/repositories/achievement_repository.dart';
+import 'package:vibration/vibration.dart';
 
 // Events
 abstract class WorkTrackingEvent extends Equatable {
@@ -64,6 +68,13 @@ class EndBreak extends WorkTrackingEvent {
 }
 
 class RestoreBreak extends WorkTrackingEvent {}
+
+class UpdateBreakDuration extends WorkTrackingEvent {
+  final int durationMinutes;
+  const UpdateBreakDuration({required this.durationMinutes});
+  @override
+  List<Object?> get props => [durationMinutes];
+}
 
 // States
 abstract class WorkTrackingState extends Equatable {
@@ -193,6 +204,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     on<TickBreakTimer>(_onTickBreakTimer);
     on<EndBreak>(_onEndBreak);
     on<RestoreBreak>(_onRestoreBreak);
+    on<UpdateBreakDuration>(_onUpdateBreakDuration);
   }
 
   Future<void> _onLoadWorkEntries(
@@ -214,6 +226,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       ).subtract(Duration(days: weekDay - 1));
       final weeklySummary = await getWeeklySummaryUseCase(startOfWeek);
       final double dailyGoal = await SettingsService.getDailyGoal();
+      final int breakDuration = await SettingsService.getBreakDuration();
       emit(
         WorkTrackingLoaded(
           workEntries: workEntries,
@@ -221,6 +234,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           isClockInEnabled: activeWorkEntry == null,
           dailyHours: weeklySummary.dailyHours,
           dailyGoal: dailyGoal,
+          breakDurationMinutes: breakDuration,
         ),
       );
     } catch (e) {
@@ -261,7 +275,16 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
         taskRating: event.taskRating,
         taskComment: event.taskComment,
       );
-
+      // Vibration feedback on clock in
+      final hasVibrator = await Vibration.hasVibrator();
+      if (await SettingsService.getVibrationEnabled() && hasVibrator == true) {
+        Vibration.vibrate(duration: 50);
+      }
+      // Sound feedback on clock in
+      if (await SettingsService.getSoundEnabled()) {
+        await _audioPlayer.stop();
+        await _audioPlayer.play(AssetSource('sounds/beep.mp3'));
+      }
       // Start timer to update active work entry
       _startTimer();
 
@@ -285,27 +308,114 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     ClockOut event,
     Emitter<WorkTrackingState> emit,
   ) async {
-    emit(WorkTrackingLoading());
     try {
-      await clockOutUseCase();
-
-      // Stop timer
-      _stopTimer();
-
-      final List<WorkEntry> workEntries = await getWorkEntriesUseCase();
-      final double dailyGoal = await SettingsService.getDailyGoal();
-      emit(
-        WorkTrackingLoaded(
-          workEntries: workEntries,
-          activeWorkEntry: null,
-          isClockInEnabled: true,
-          dailyHours: {},
-          dailyGoal: dailyGoal,
-        ),
-      );
+      final WorkEntry updatedEntry = await clockOutUseCase();
+      // Vibration feedback on clock out
+      final hasVibratorOut = await Vibration.hasVibrator();
+      if (await SettingsService.getVibrationEnabled() &&
+          hasVibratorOut == true) {
+        Vibration.vibrate(duration: 50);
+      }
+      // Sound feedback on clock out
+      if (await SettingsService.getSoundEnabled()) {
+        await _audioPlayer.stop();
+        await _audioPlayer.play(AssetSource('sounds/beep.mp3'));
+      }
+      // Achievement logic: Early Bird
+      if (updatedEntry.startTime.hour < 8) {
+        await AchievementRepository.updateAchievementGlobal(
+          'early_bird',
+          unlocked: true,
+          progress: 1.0,
+        );
+      }
+      // Consistency King: 30-day streak
+      final allEntries = await getWorkEntriesUseCase();
+      final streakDays = _calculateStreakDays(allEntries);
+      if (streakDays >= 30) {
+        await AchievementRepository.updateAchievementGlobal(
+          'consistency_king',
+          unlocked: true,
+          progress: 1.0,
+        );
+      } else {
+        await AchievementRepository.updateAchievementGlobal(
+          'consistency_king',
+          progress: streakDays / 30.0,
+        );
+      }
+      // Task Crusher: 100 tasks in a month
+      final now = DateTime.now();
+      final monthEntries = allEntries
+          .where(
+            (e) =>
+                e.date.year == now.year &&
+                e.date.month == now.month &&
+                !e.isActive,
+          )
+          .toList();
+      if (monthEntries.length >= 100) {
+        await AchievementRepository.updateAchievementGlobal(
+          'task_crusher',
+          unlocked: true,
+          progress: 1.0,
+        );
+      } else {
+        await AchievementRepository.updateAchievementGlobal(
+          'task_crusher',
+          progress: monthEntries.length / 100.0,
+        );
+      }
+      // Focus Master: 50 tasks with 90%+ productivity
+      final focusEntries = allEntries
+          .where(
+            (e) =>
+                (e.taskRating == 'Good' || e.taskRating == 'Average') &&
+                !e.isActive,
+          )
+          .toList();
+      final goodEntries = allEntries
+          .where((e) => e.taskRating == 'Good' && !e.isActive)
+          .toList();
+      if (focusEntries.length >= 50 &&
+          goodEntries.length / focusEntries.length >= 0.9) {
+        await AchievementRepository.updateAchievementGlobal(
+          'focus_master',
+          unlocked: true,
+          progress: 1.0,
+        );
+      } else {
+        final progress = focusEntries.isEmpty
+            ? 0.0
+            : (goodEntries.length / focusEntries.length).clamp(0.0, 1.0);
+        await AchievementRepository.updateAchievementGlobal(
+          'focus_master',
+          progress: progress,
+        );
+      }
+      add(LoadWorkEntries());
     } catch (e) {
       emit(WorkTrackingError(message: e.toString()));
     }
+  }
+
+  int _calculateStreakDays(List<WorkEntry> entries) {
+    // Only consider completed entries
+    final completed = entries.where((e) => !e.isActive).toList();
+    if (completed.isEmpty) return 0;
+    completed.sort((a, b) => b.date.compareTo(a.date));
+    int streak = 1;
+    DateTime prev = completed.first.date;
+    for (int i = 1; i < completed.length; i++) {
+      final diff = prev.difference(completed[i].date).inDays;
+      if (diff == 1) {
+        streak++;
+        prev = completed[i].date;
+      } else if (diff > 1) {
+        break;
+      }
+    }
+    return streak;
   }
 
   Future<void> _onLoadWeeklySummary(
@@ -331,6 +441,14 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     StartBreak event,
     Emitter<WorkTrackingState> emit,
   ) async {
+    // Defensive: Only start a break if not already on break
+    if (state is WorkTrackingLoaded &&
+        (state as WorkTrackingLoaded).isOnBreak) {
+      print(
+        'Attempted to start a break, but one is already running. Ignoring.',
+      );
+      return;
+    }
     final now = DateTime.now();
     await SettingsService.startBreak(now, event.durationMinutes);
     _startBreakTimer(now, event.durationMinutes, emit);
@@ -339,17 +457,21 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
   void _startBreakTimer(
     DateTime start,
     int durationMinutes,
-    Emitter<WorkTrackingState> emit,
-  ) {
+    Emitter<WorkTrackingState> emit, {
+    int? elapsedSeconds,
+    int? remainingSeconds,
+  }) {
     _breakTimer?.cancel();
     final totalSeconds = durationMinutes * 60;
+    final elapsed = elapsedSeconds ?? 0;
+    final remaining = remainingSeconds ?? totalSeconds;
     emit(
       _currentLoadedState().copyWith(
         isOnBreak: true,
         breakStartTime: start,
         breakDurationMinutes: durationMinutes,
-        breakElapsedSeconds: 0,
-        breakRemainingSeconds: totalSeconds,
+        breakElapsedSeconds: elapsed,
+        breakRemainingSeconds: remaining,
       ),
     );
     _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -389,11 +511,12 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
   ) async {
     _breakTimer?.cancel();
     await SettingsService.endBreak();
+    final breakDuration = await SettingsService.getBreakDuration();
     emit(
       _currentLoadedState().copyWith(
         isOnBreak: false,
         breakStartTime: null,
-        breakDurationMinutes: null,
+        breakDurationMinutes: breakDuration,
         breakElapsedSeconds: 0,
         breakRemainingSeconds: 0,
       ),
@@ -409,6 +532,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     Emitter<WorkTrackingState> emit,
   ) async {
     final breakInfo = await SettingsService.getActiveBreak();
+    print('Restoring break: ' + breakInfo.toString());
     if (breakInfo != null) {
       final start = breakInfo['start'] as DateTime;
       final duration = breakInfo['duration'] as int;
@@ -416,8 +540,26 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       final elapsed = now.difference(start).inSeconds;
       final total = duration * 60;
       final remaining = total - elapsed;
+      print(
+        'Break start: ' +
+            start.toString() +
+            ', duration: ' +
+            duration.toString() +
+            ', now: ' +
+            now.toString() +
+            ', elapsed: ' +
+            elapsed.toString() +
+            ', remaining: ' +
+            remaining.toString(),
+      );
       if (remaining > 0) {
-        _startBreakTimer(start, duration, emit);
+        _startBreakTimer(
+          start,
+          duration,
+          emit,
+          elapsedSeconds: elapsed,
+          remainingSeconds: remaining,
+        );
         emit(
           _currentLoadedState().copyWith(
             breakElapsedSeconds: elapsed,
@@ -425,8 +567,22 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           ),
         );
       } else {
+        print('Break ended automatically on restore');
         add(const EndBreak(autoEnded: true));
       }
+    } else {
+      print('No active break found in storage');
+    }
+  }
+
+  Future<void> _onUpdateBreakDuration(
+    UpdateBreakDuration event,
+    Emitter<WorkTrackingState> emit,
+  ) async {
+    await SettingsService.setBreakDuration(event.durationMinutes);
+    if (state is WorkTrackingLoaded) {
+      final currentState = state as WorkTrackingLoaded;
+      emit(currentState.copyWith(breakDurationMinutes: event.durationMinutes));
     }
   }
 

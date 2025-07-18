@@ -44,10 +44,6 @@ class AppConstants {
   static const int maxTaskDescriptionLength = 200;
   static const int maxCommentLength = 500;
 
-  // PDF Export
-  static const String pdfFileName = 'hourmate_timesheet';
-  static const String pdfTitle = 'Weekly Timesheet';
-
   // Navigation
   static const String homeRoute = '/';
   static const String workLogRoute = '/work-log';

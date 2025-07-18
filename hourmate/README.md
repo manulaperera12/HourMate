@@ -11,7 +11,6 @@ HourMate is a modern Flutter application designed to help you track your work ho
 - **⭐ Task Rating**: Rate tasks as Good, Average, or Bad using intuitive emoji UI
 - **💬 Optional Comments**: Add notes about roadblocks, mood, client issues, etc.
 - **📊 Weekly Summary**: View total hours worked and task quality summary
-- **📄 PDF Export**: Generate shareable weekly timesheets (coming soon)
 - **⚙️ Settings**: Theme toggle, user preferences, and notifications (coming soon)
 
 ### UI/UX Highlights
@@ -53,7 +52,6 @@ lib/
 - **Framework**: Flutter 3.8+
 - **State Management**: flutter_bloc (BLoC pattern)
 - **Local Storage**: SharedPreferences
-- **PDF Generation**: pdf package
 - **Charts**: fl_chart
 - **Date/Time**: intl
 - **UI Components**: google_fonts, flutter_svg
@@ -184,7 +182,6 @@ flutter test
 - ✅ Modern UI/UX
 
 ### Phase 2 (Coming Soon)
-- 📄 PDF export functionality
 - ⚙️ Settings page
 - 🌙 Enhanced theme customization
 - 📊 Advanced analytics and charts

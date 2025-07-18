@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/work_entry.dart';
+import 'digital_timer.dart';
 
 class WorkStatusCard extends StatefulWidget {
   final WorkEntry workEntry;
@@ -85,8 +86,16 @@ class _WorkStatusCardState extends State<WorkStatusCard> {
                 fontSize: 20,
               ),
             ),
-            const SizedBox(height: 10),
-            // Duration
+            const SizedBox(height: 16),
+            // Simple Digital Timer
+            DigitalTimer(
+              startTime: widget.workEntry.startTime,
+              fontSize: 28,
+              showSeconds: true,
+              textColor: AppTheme.neonYellowGreen,
+            ),
+            const SizedBox(height: 16),
+            // Duration and Start Time
             Row(
               children: [
                 Icon(

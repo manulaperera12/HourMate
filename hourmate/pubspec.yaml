@@ -43,8 +43,8 @@ dependencies:
   shared_preferences: ^2.5.3
   
   # PDF Generation
-  pdf: ^3.10.7
   path_provider: ^2.1.2
+  share_plus: ^7.2.1
   
   # Charts
   fl_chart: ^1.0.0
@@ -60,6 +60,8 @@ dependencies:
   uuid: ^4.3.3
   percent_indicator: ^4.2.3
   audioplayers: ^6.5.0
+  excel: ^2.1.0
+  vibration: ^1.7.7
 
 dev_dependencies:
   flutter_test:
