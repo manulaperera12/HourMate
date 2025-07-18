@@ -162,18 +162,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              AppHeader(
-                title: 'Settings',
-                subtitle: 'Customize your HourMate experience',
-                showBackButton: widget.showBackButton,
-                onAvatarTap: _navigateToProfile,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                flexibleSpace: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    left: 8.0,
+                    right: 8.0,
+                  ),
+                  child: AppHeader(
+                    title: 'Settings',
+                    subtitle: 'Customize your HourMate experience',
+                    showBackButton: widget.showBackButton,
+                    onAvatarTap: _navigateToProfile,
+                  ),
+                ),
+                expandedHeight: 105,
+                toolbarHeight: 105,
               ),
-              // Settings Content
-              Expanded(
-                child: SingleChildScrollView(
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -898,57 +913,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _exportToExcel(Map<String, dynamic> exportData) async {
     final excel = Excel.createExcel();
-
-    // Work Entries Sheet
-    final workSheet = excel['Work Entries'];
+    final workSheet = excel['Work Entries'] as dynamic;
     final workEntries = exportData['workEntries'] as List<dynamic>;
     if (workEntries.isNotEmpty) {
-      workSheet.appendRow(workEntries.first.keys.toList());
+      workSheet.appendRow(
+        workEntries.first.keys.map((e) => e.toString()).toList(),
+      );
       for (final entry in workEntries) {
-        workSheet.appendRow(entry.values.toList());
+        workSheet.appendRow(entry.values.map((e) => e.toString()).toList());
       }
     } else {
       workSheet.appendRow(['No work entries found']);
     }
-
-    // Goals Sheet
-    final goalsSheet = excel['Goals'];
+    final goalsSheet = excel['Goals'] as dynamic;
     final goals = exportData['customGoals'] as List<dynamic>;
     if (goals.isNotEmpty) {
-      goalsSheet.appendRow(goals.first.keys.toList());
+      goalsSheet.appendRow(goals.first.keys.map((e) => e.toString()).toList());
       for (final goal in goals) {
-        goalsSheet.appendRow(goal.values.toList());
+        goalsSheet.appendRow(goal.values.map((e) => e.toString()).toList());
       }
     } else {
       goalsSheet.appendRow(['No goals found']);
     }
-
-    // Breaks Sheet
-    final breaksSheet = excel['Breaks'];
+    final breaksSheet = excel['Breaks'] as dynamic;
     final breaks = exportData['breaks'] as List<dynamic>;
     if (breaks.isNotEmpty) {
-      breaksSheet.appendRow(breaks.first.keys.toList());
+      breaksSheet.appendRow(
+        breaks.first.keys.map((e) => e.toString()).toList(),
+      );
       for (final brk in breaks) {
-        breaksSheet.appendRow(brk.values.toList());
+        breaksSheet.appendRow(brk.values.map((e) => e.toString()).toList());
       }
     } else {
       breaksSheet.appendRow(['No breaks found']);
     }
-
-    // Settings Sheet
-    final settingsSheet = excel['Settings'];
+    final settingsSheet = excel['Settings'] as dynamic;
     final settings = exportData['settings'] as Map<String, dynamic>;
     settingsSheet.appendRow(['Setting', 'Value']);
     settings.forEach((key, value) {
-      settingsSheet.appendRow([key, value.toString()]);
+      settingsSheet.appendRow([key.toString(), value.toString()]);
     });
-
-    // Profile Sheet
-    final profileSheet = excel['Profile'];
+    final profileSheet = excel['Profile'] as dynamic;
     final profile = exportData['profile'] as Map<String, dynamic>;
     profileSheet.appendRow(['Field', 'Value']);
     profile.forEach((key, value) {
-      profileSheet.appendRow([key, value.toString()]);
+      profileSheet.appendRow([key.toString(), value.toString()]);
     });
 
     // Save file

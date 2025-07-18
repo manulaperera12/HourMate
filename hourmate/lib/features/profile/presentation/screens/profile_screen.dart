@@ -90,47 +90,51 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
 
   Future<void> _exportToExcel(Map<String, dynamic> exportData) async {
     final excel = xls.Excel.createExcel();
-    final workSheet = excel['Work Entries'];
+    final workSheet = excel['Work Entries'] as dynamic;
     final workEntries = exportData['workEntries'] as List<dynamic>;
     if (workEntries.isNotEmpty) {
-      workSheet.appendRow(workEntries.first.keys.toList());
+      workSheet.appendRow(
+        workEntries.first.keys.map((e) => e.toString()).toList(),
+      );
       for (final entry in workEntries) {
-        workSheet.appendRow(entry.values.toList());
+        workSheet.appendRow(entry.values.map((e) => e.toString()).toList());
       }
     } else {
       workSheet.appendRow(['No work entries found']);
     }
-    final goalsSheet = excel['Goals'];
+    final goalsSheet = excel['Goals'] as dynamic;
     final goals = exportData['customGoals'] as List<dynamic>;
     if (goals.isNotEmpty) {
-      goalsSheet.appendRow(goals.first.keys.toList());
+      goalsSheet.appendRow(goals.first.keys.map((e) => e.toString()).toList());
       for (final goal in goals) {
-        goalsSheet.appendRow(goal.values.toList());
+        goalsSheet.appendRow(goal.values.map((e) => e.toString()).toList());
       }
     } else {
       goalsSheet.appendRow(['No goals found']);
     }
-    final breaksSheet = excel['Breaks'];
+    final breaksSheet = excel['Breaks'] as dynamic;
     final breaks = exportData['breaks'] as List<dynamic>;
     if (breaks.isNotEmpty) {
-      breaksSheet.appendRow(breaks.first.keys.toList());
+      breaksSheet.appendRow(
+        breaks.first.keys.map((e) => e.toString()).toList(),
+      );
       for (final brk in breaks) {
-        breaksSheet.appendRow(brk.values.toList());
+        breaksSheet.appendRow(brk.values.map((e) => e.toString()).toList());
       }
     } else {
       breaksSheet.appendRow(['No breaks found']);
     }
-    final settingsSheet = excel['Settings'];
+    final settingsSheet = excel['Settings'] as dynamic;
     final settings = exportData['settings'] as Map<String, dynamic>;
     settingsSheet.appendRow(['Setting', 'Value']);
     settings.forEach((key, value) {
-      settingsSheet.appendRow([key, value.toString()]);
+      settingsSheet.appendRow([key.toString(), value.toString()]);
     });
-    final profileSheet = excel['Profile'];
+    final profileSheet = excel['Profile'] as dynamic;
     final profile = exportData['profile'] as Map<String, dynamic>;
     profileSheet.appendRow(['Field', 'Value']);
     profile.forEach((key, value) {
-      profileSheet.appendRow([key, value.toString()]);
+      profileSheet.appendRow([key.toString(), value.toString()]);
     });
     final bytes = excel.encode();
     final dir = await getApplicationDocumentsDirectory();
@@ -425,39 +429,54 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              AppHeader(
-                title: 'Profile',
-                subtitle: 'Your work journey',
-                showBackButton: widget.showBackButton,
-                leading: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      width: 3,
-                    ),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                flexibleSpace: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    left: 8.0,
+                    right: 8.0,
                   ),
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: AppTheme.neonYellowGreen,
-                    child: Text(
-                      _userData['avatar'] ?? 'U',
-                      style: const TextStyle(
-                        color: AppTheme.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                        letterSpacing: 1.5,
+                  child: AppHeader(
+                    title: 'Profile',
+                    subtitle: 'Your work journey',
+                    showBackButton: widget.showBackButton,
+                    leading: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          width: 3,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: AppTheme.neonYellowGreen,
+                        child: Text(
+                          _userData['avatar'] ?? 'U',
+                          style: const TextStyle(
+                            color: AppTheme.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
+                expandedHeight: 105,
+                toolbarHeight: 105,
               ),
-              // Profile Content
-              Expanded(
-                child: SingleChildScrollView(
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -465,13 +484,8 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-
-                      // Profile Info Card
                       ProfileInfoCard(userData: _userData),
-
                       const SizedBox(height: 24),
-
-                      // Stats Cards
                       Row(
                         children: [
                           Expanded(
@@ -494,9 +508,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 16),
-
                       Row(
                         children: [
                           Expanded(
@@ -518,10 +530,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Level Progress
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -619,10 +628,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Achievements Section
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -711,10 +717,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           },
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Action Buttons
                       ProfileActionButton(
                         title: 'Edit Profile',
                         subtitle: 'Update your information',
@@ -722,9 +725,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                         color: AppTheme.neonYellowGreen,
                         onTap: _showEditProfileSheet,
                       ),
-
                       const SizedBox(height: 12),
-
                       ProfileActionButton(
                         title: 'Export Data',
                         subtitle: 'Download your work history',
@@ -835,9 +836,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           );
                         },
                       ),
-
                       const SizedBox(height: 12),
-
                       ProfileActionButton(
                         title: 'Share Profile',
                         subtitle: 'Share your achievements',
@@ -847,7 +846,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                           // TODO: Share profile functionality
                         },
                       ),
-
                       const SizedBox(height: 40),
                     ],
                   ),

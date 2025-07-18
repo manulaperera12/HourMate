@@ -121,96 +121,107 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                 ),
               ),
               child: SafeArea(
-                child: Column(
-                  children: [
-                    AppHeader(
-                      title: 'Work Log',
-                      subtitle: 'View and filter your work sessions',
-                      showBackButton: widget.showBackButton,
-                      onBack: widget.showBackButton
-                          ? () => Navigator.of(context).pop()
-                          : null,
-                      onAvatarTap: _navigateToProfile,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      floating: true,
+                      snap: true,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: Padding(
+                        padding: const EdgeInsets.only(
+                          top: 8.0,
+                          left: 8.0,
+                          right: 8.0,
+                        ),
+                        child: AppHeader(
+                          title: 'Work Log',
+                          subtitle: 'View and filter your work sessions',
+                          showBackButton: widget.showBackButton,
+                          onBack: widget.showBackButton
+                              ? () => Navigator.of(context).pop()
+                              : null,
+                          onAvatarTap: _navigateToProfile,
+                        ),
+                      ),
+                      expandedHeight: 105,
+                      toolbarHeight: 105,
                     ),
-                    Expanded(
-                      child: SingleChildScrollView(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         child: Column(
                           children: [
-                            Padding(
+                            Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal: 8,
+                                vertical: 6,
                               ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.tabBarBg.withValues(
-                                    alpha: 0.5,
+                              decoration: BoxDecoration(
+                                color: AppTheme.tabBarBg.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
                                   ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: List.generate(tabs.length, (index) {
-                                    final isSelected = index == selectedTab;
-                                    return Expanded(
-                                      child: GestureDetector(
-                                        onTap: () =>
-                                            setState(() => selectedTab = index),
-                                        child: AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 250,
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: List.generate(tabs.length, (index) {
+                                  final isSelected = index == selectedTab;
+                                  return Expanded(
+                                    child: GestureDetector(
+                                      onTap: () =>
+                                          setState(() => selectedTab = index),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 250,
+                                        ),
+                                        curve: Curves.ease,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppTheme.tabSelected
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            15,
                                           ),
-                                          curve: Curves.ease,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? AppTheme.tabSelected
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              15,
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              tabs[index],
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium
-                                                  ?.copyWith(
-                                                    color: isSelected
-                                                        ? AppTheme.black
-                                                        : AppTheme.tabUnselected
-                                                              .withValues(
-                                                                alpha: 0.7,
-                                                              ),
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w500,
-                                                    fontSize: 16,
-                                                  ),
-                                            ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            tabs[index],
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  color: isSelected
+                                                      ? AppTheme.black
+                                                      : AppTheme.tabUnselected
+                                                            .withValues(
+                                                              alpha: 0.7,
+                                                            ),
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.bold
+                                                      : FontWeight.w500,
+                                                  fontSize: 16,
+                                                ),
                                           ),
                                         ),
                                       ),
-                                    );
-                                  }),
-                                ),
+                                    ),
+                                  );
+                                }),
                               ),
                             ),
                             ListView.builder(

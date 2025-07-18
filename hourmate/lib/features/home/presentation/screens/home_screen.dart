@@ -177,20 +177,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Remove backgroundColor from Scaffold to allow gradient
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              // AppTheme.headerGradientStart, // Neon yellow-green
               AppTheme.headerGradientStart.withValues(alpha: 0.8),
-              AppTheme.backgroundColor, // Dark/black
+              AppTheme.backgroundColor,
               AppTheme.backgroundColor,
               AppTheme.backgroundColor,
             ],
-            stops: [0.0, 0.5, 0.9, 1.0], // Top 30% is neon, then fades to dark
+            stops: [0.0, 0.5, 0.9, 1.0],
           ),
         ),
         child: SafeArea(
@@ -207,137 +205,138 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             builder: (context, state) {
               if (state is! WorkTrackingLoaded) {
-                // Show loading indicator until state is fully restored
                 return const Center(child: CircularProgressIndicator());
               }
 
               if (state is WorkTrackingLoaded) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    HomeHeader(
-                      dateRange: _currentWeekRange,
-                      onSettingsTap: _navigateToSettings,
-                      onAvatarTap: _navigateToProfile,
-                      showBackButton: widget.showBackButton,
-                      onBack: () => Navigator.of(context).pop(),
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      floating: true,
+                      snap: true,
+                      automaticallyImplyLeading: false,
+                      flexibleSpace: Padding(
+                        padding: const EdgeInsets.only(
+                          top: 8.0,
+                          left: 8.0,
+                          right: 8.0,
+                        ),
+                        child: HomeHeader(
+                          dateRange: _currentWeekRange,
+                          onSettingsTap: _navigateToSettings,
+                          onAvatarTap: _navigateToProfile,
+                          showBackButton: widget.showBackButton,
+                          onBack: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      expandedHeight: 105,
+                      toolbarHeight: 105,
                     ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 32),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: HomeTabBar(
-                                  selectedIndex: _selectedTab,
-                                  onTabSelected: (index) {
-                                    setState(() => _selectedTab = index);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 30),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: _buildTabContent(_selectedTab, state),
-                              ),
-                              const SizedBox(height: 20),
-                              // Clock In/Out Button
-                              ClockInOutButton(
-                                isClockInEnabled: state.isClockInEnabled,
-                                activeWorkEntry: state.activeWorkEntry,
-                                onClockIn: _showClockInModal,
-                                onClockOut: _showClockOutModal,
-                              ),
-                              // Work Status Card
-                              if (state.activeWorkEntry != null)
-                                WorkStatusCard(
-                                  workEntry: state.activeWorkEntry!,
-                                ),
-                              // Quick Actions
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                  horizontal: 8,
-                                ),
-                                child: QuickActions(
-                                  onViewLog: () => _navigateToWorkLog(),
-                                  onViewSummary: () =>
-                                      _navigateToWeeklySummary(),
-                                ),
-                              ),
-                              // Break Timer Section
-                              Builder(
-                                builder: (context) {
-                                  final state = context
-                                      .watch<WorkTrackingBloc>()
-                                      .state;
-                                  if (state is! WorkTrackingLoaded) {
-                                    // Show loader until break state is fully restored
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 32,
-                                      ),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return BreakTimerCard(
-                                    isOnBreak: state.isOnBreak,
-                                    breakDurationMinutes:
-                                        state.breakDurationMinutes,
-                                    breakElapsedSeconds:
-                                        state.breakElapsedSeconds,
-                                    breakRemainingSeconds:
-                                        state.breakRemainingSeconds,
-                                    defaultDuration:
-                                        state.breakDurationMinutes ?? 15,
-                                    onDurationChanged: (v) {
-                                      context.read<WorkTrackingBloc>().add(
-                                        UpdateBreakDuration(durationMinutes: v),
-                                      );
-                                    },
-                                    onStartBreak: () {
-                                      if (!(state.isOnBreak ?? false)) {
-                                        context.read<WorkTrackingBloc>().add(
-                                          StartBreak(
-                                            durationMinutes:
-                                                state.breakDurationMinutes ??
-                                                15,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    onEndBreak: () {
-                                      context.read<WorkTrackingBloc>().add(
-                                        const EndBreak(),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                              // Today's Work Summary
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                child: _buildTodaySummary(state.workEntries),
-                              ),
-                              const SizedBox(height: 100),
-                            ],
-                          ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: HomeTabBar(
+                          selectedIndex: _selectedTab,
+                          onTabSelected: (index) {
+                            setState(() => _selectedTab = index);
+                          },
                         ),
                       ),
                     ),
+                    SliverToBoxAdapter(child: const SizedBox(height: 30)),
+                    SliverToBoxAdapter(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildTabContent(_selectedTab, state),
+                      ),
+                    ),
+                    SliverToBoxAdapter(child: const SizedBox(height: 20)),
+                    SliverToBoxAdapter(
+                      child: ClockInOutButton(
+                        isClockInEnabled: state.isClockInEnabled,
+                        activeWorkEntry: state.activeWorkEntry,
+                        onClockIn: _showClockInModal,
+                        onClockOut: _showClockOutModal,
+                      ),
+                    ),
+                    if (state.activeWorkEntry != null)
+                      SliverToBoxAdapter(
+                        child: WorkStatusCard(
+                          workEntry: state.activeWorkEntry!,
+                        ),
+                      ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                        child: QuickActions(
+                          onViewLog: () => _navigateToWorkLog(),
+                          onViewSummary: () => _navigateToWeeklySummary(),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Builder(
+                        builder: (context) {
+                          final state = context.watch<WorkTrackingBloc>().state;
+                          if (state is! WorkTrackingLoaded) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+                          return BreakTimerCard(
+                            isOnBreak: state.isOnBreak,
+                            breakDurationMinutes: state.breakDurationMinutes,
+                            breakElapsedSeconds: state.breakElapsedSeconds,
+                            breakRemainingSeconds: state.breakRemainingSeconds,
+                            defaultDuration: state.breakDurationMinutes ?? 15,
+                            onDurationChanged: (v) {
+                              context.read<WorkTrackingBloc>().add(
+                                UpdateBreakDuration(durationMinutes: v),
+                              );
+                            },
+                            onStartBreak: () {
+                              if (!(state.isOnBreak ?? false)) {
+                                context.read<WorkTrackingBloc>().add(
+                                  StartBreak(
+                                    durationMinutes:
+                                        state.breakDurationMinutes ?? 15,
+                                  ),
+                                );
+                              }
+                            },
+                            onEndBreak: () {
+                              context.read<WorkTrackingBloc>().add(
+                                const EndBreak(),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        child: _buildTodaySummary(state.workEntries),
+                      ),
+                    ),
+                    SliverToBoxAdapter(child: const SizedBox(height: 100)),
                   ],
                 );
               }
