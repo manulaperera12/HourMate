@@ -202,23 +202,48 @@ class WeeklySummaryScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              if (showBackButton)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: AppTheme.primaryColor,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                floating: true,
+                snap: true,
+                automaticallyImplyLeading: false,
+                flexibleSpace: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    left: 8.0,
+                    right: 8.0,
+                  ),
+                  child: Row(
+                    children: [
+                      if (showBackButton)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: AppTheme.primaryColor,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Weekly Summary',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppTheme.primaryTextColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                            ),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
+                    ],
                   ),
                 ),
-              const WeeklySummaryContent(),
+                expandedHeight: 80,
+                toolbarHeight: 80,
+              ),
+              SliverToBoxAdapter(child: const WeeklySummaryContent()),
             ],
           ),
         ),

@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import '../../../profile/presentation/blocs/achievements_cubit.dart';
 import '../../../profile/data/repositories/achievement_repository.dart';
 import 'package:vibration/vibration.dart';
+import '../../data/datasources/work_entry_local_datasource.dart';
 
 // Events
 abstract class WorkTrackingEvent extends Equatable {
@@ -214,6 +215,18 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     emit(WorkTrackingLoading());
     try {
       final List<WorkEntry> workEntries = await getWorkEntriesUseCase();
+      // Defensive: ensure workEntries is a List<WorkEntry>
+      if (workEntries is! List<WorkEntry>) {
+        debugPrint('Corrupted workEntries: $workEntries');
+        await WorkEntryLocalDataSource.clearCorruptedWorkEntries();
+        emit(
+          const WorkTrackingError(
+            message:
+                'Work entry data was corrupted and has been reset. Please try again.',
+          ),
+        );
+        return;
+      }
       final WorkEntry? activeWorkEntry = await getWorkEntriesUseCase
           .getActiveEntry();
       // Calculate start of week
@@ -393,9 +406,13 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           progress: progress,
         );
       }
+      // Emit loading state before reloading entries to force HomeScreen rebuild
+      emit(WorkTrackingLoading());
       add(LoadWorkEntries());
-    } catch (e) {
-      emit(WorkTrackingError(message: e.toString()));
+    } catch (e, st) {
+      emit(
+        WorkTrackingError(message: 'Failed to end session: ${e.toString()}'),
+      );
     }
   }
 
