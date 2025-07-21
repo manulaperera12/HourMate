@@ -12,6 +12,7 @@ class ClockInOutButton extends StatefulWidget {
   final WorkEntry? activeWorkEntry;
   final VoidCallback onClockIn;
   final VoidCallback onClockOut;
+  final bool isOnBreak; // NEW
 
   const ClockInOutButton({
     super.key,
@@ -19,6 +20,7 @@ class ClockInOutButton extends StatefulWidget {
     this.activeWorkEntry,
     required this.onClockIn,
     required this.onClockOut,
+    required this.isOnBreak, // NEW
   });
 
   @override
@@ -73,7 +75,9 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(32),
               child: InkWell(
-                onTap: widget.onClockIn,
+                onTap: widget.isOnBreak
+                    ? null
+                    : widget.onClockIn, // DISABLE if on break
                 borderRadius: BorderRadius.circular(32),
                 child: Container(
                   width: double.infinity,
@@ -82,18 +86,10 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                     horizontal: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.cardColor,
+                    color: widget.isOnBreak
+                        ? AppTheme.disabledTextColor.withValues(alpha: 0.2)
+                        : AppTheme.tabBarBg.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(20),
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.0,
-                      colors: [
-                        const Color(0xFF2C2C2C),
-                        const Color(0xFF1A1A1A).withValues(alpha: 0.5),
-                        const Color(0xFF0D0D0D).withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -103,13 +99,23 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
-                            colors: [
-                              AppTheme.headerGradientEnd, // Cyan
-                              AppTheme.headerGradientStart, // Neon yellow-green
-                            ],
+                            colors: widget.isOnBreak
+                                ? [
+                                    AppTheme.disabledTextColor.withValues(
+                                      alpha: 0.2,
+                                    ), // Cyan
+                                    AppTheme.disabledTextColor.withValues(
+                                      alpha: 0.5,
+                                    ), // Neon yellow-green
+                                  ]
+                                : [
+                                    AppTheme.headerGradientEnd, // Cyan
+                                    AppTheme
+                                        .headerGradientStart, // Neon yellow-green
+                                  ],
                           ),
                           shape: BoxShape.circle,
                           border: Border.all(

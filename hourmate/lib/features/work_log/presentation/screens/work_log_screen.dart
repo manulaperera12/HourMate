@@ -295,13 +295,6 @@ class _WorkLogCardState extends State<_WorkLogCard> {
       decoration: BoxDecoration(
         color: AppTheme.cardColor.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: widget.ratingColor.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),

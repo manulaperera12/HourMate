@@ -14,7 +14,7 @@ class HorizontalProgressList extends StatelessWidget {
       height: 120,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: weekProgress.length,
         separatorBuilder: (_, __) => const SizedBox(width: 18),
         itemBuilder: (context, index) {
@@ -24,7 +24,10 @@ class HorizontalProgressList extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.backgroundColor,
               borderRadius: BorderRadius.circular(35),
-              border: Border.all(color: AppTheme.disabledTextColor, width: 2),
+              border: Border.all(
+                color: AppTheme.neonYellowGreen.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(8.0),

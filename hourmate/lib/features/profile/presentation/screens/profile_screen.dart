@@ -9,7 +9,7 @@ import '../widgets/profile_action_button.dart';
 import '../../domain/entities/achievement.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/achievements_cubit.dart';
-import 'package:excel/excel.dart' as xls;
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' as syncfusion;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
@@ -17,6 +17,7 @@ import '../../../home/data/datasources/work_entry_local_datasource.dart';
 import '../../../../core/services/settings_service.dart';
 import '../../../../main.dart';
 import '../widgets/level_up_popup.dart';
+import 'package:excel/excel.dart';
 
 class ProfileScreen extends StatelessWidget {
   final bool showBackButton;
@@ -73,76 +74,168 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
 
   Future<Map<String, dynamic>> _getProfileData() async {
     final prefs = await SharedPreferences.getInstance();
+    final dataSource = WorkEntryLocalDataSource();
+    final entries = (await dataSource.getAllWorkEntries())
+        .map((e) => e.toEntity())
+        .toList();
+    final completed = entries.where((e) => !e.isActive).toList();
+    // Total hours
+    final totalHours = completed.fold<double>(
+      0.0,
+      (sum, e) => sum + e.durationInHours,
+    );
+    // Total sessions
+    final totalSessions = completed.length;
+    // Average rating (Good=2, Average=1, Bad=0)
+    double avgRating = 0.0;
+    if (completed.isNotEmpty) {
+      final ratingSum = completed.fold<int>(0, (sum, e) {
+        switch (e.taskRating) {
+          case 'Good':
+            return sum + 2;
+          case 'Average':
+            return sum + 1;
+          case 'Bad':
+            return sum + 0;
+          default:
+            return sum;
+        }
+      });
+      avgRating = ratingSum / completed.length;
+    }
+    // Streak calculation
+    final days =
+        completed
+            .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+            .toSet()
+            .toList()
+          ..sort();
+    int streak = 0;
+    int maxStreak = 0;
+    DateTime? prev;
+    for (final d in days) {
+      if (prev == null || d.difference(prev).inDays == 1) {
+        streak++;
+      } else {
+        streak = 1;
+      }
+      if (streak > maxStreak) maxStreak = streak;
+      prev = d;
+    }
+    // Level calculation based on experience (10 XP per session)
+    int experience = totalSessions * 10;
+    int level = (experience / 100).floor() + 1;
+    int nextLevel = level * 100;
     return {
       'name': prefs.getString('user_name') ?? 'User',
       'position': prefs.getString('user_position') ?? 'Professional',
       'company': prefs.getString('user_company') ?? '',
       'avatar': prefs.getString('user_avatar') ?? 'U',
       'joinDate': prefs.getString('join_date'),
-      'totalHours': prefs.getDouble('total_hours') ?? 0.0,
-      'totalSessions': prefs.getInt('total_sessions') ?? 0,
-      'averageRating': prefs.getDouble('average_rating') ?? 0.0,
-      'streakDays': prefs.getInt('streak_days') ?? 0,
-      'level': prefs.getInt('level') ?? 1,
-      'experience': prefs.getInt('experience') ?? 0,
-      'nextLevel': prefs.getInt('next_level') ?? 100,
+      'totalHours': totalHours,
+      'totalSessions': totalSessions,
+      'averageRating': avgRating,
+      'streakDays': maxStreak,
+      'level': level,
+      'experience': experience,
+      'nextLevel': nextLevel,
     };
   }
 
   Future<void> _exportToExcel(Map<String, dynamic> exportData) async {
-    final excel = xls.Excel.createExcel();
-    final workSheet = excel['Work Entries'] as dynamic;
+    final workbook = syncfusion.Workbook();
+    // Work Entries
+    final workSheet = workbook.worksheets[0];
+    workSheet.name = 'Work Entries';
     final workEntries = exportData['workEntries'] as List<dynamic>;
+    int row = 1;
     if (workEntries.isNotEmpty) {
-      workSheet.appendRow(
-        workEntries.first.keys.map((e) => e.toString()).toList(),
-      );
+      final headers = workEntries.first.keys.toList();
+      for (int i = 0; i < headers.length; i++) {
+        workSheet.getRangeByIndex(row, i + 1).setText(headers[i].toString());
+      }
+      row++;
       for (final entry in workEntries) {
-        workSheet.appendRow(entry.values.map((e) => e.toString()).toList());
+        final values = entry.values.toList();
+        for (int i = 0; i < values.length; i++) {
+          workSheet.getRangeByIndex(row, i + 1).setText(values[i].toString());
+        }
+        row++;
       }
     } else {
-      workSheet.appendRow(['No work entries found']);
+      workSheet.getRangeByIndex(row, 1).setText('No work entries found');
     }
-    final goalsSheet = excel['Goals'] as dynamic;
+    // Goals
+    final goalsSheet = workbook.worksheets.addWithName('Goals');
     final goals = exportData['customGoals'] as List<dynamic>;
+    row = 1;
     if (goals.isNotEmpty) {
-      goalsSheet.appendRow(goals.first.keys.map((e) => e.toString()).toList());
+      final headers = goals.first.keys.toList();
+      for (int i = 0; i < headers.length; i++) {
+        goalsSheet.getRangeByIndex(row, i + 1).setText(headers[i].toString());
+      }
+      row++;
       for (final goal in goals) {
-        goalsSheet.appendRow(goal.values.map((e) => e.toString()).toList());
+        final values = goal.values.toList();
+        for (int i = 0; i < values.length; i++) {
+          goalsSheet.getRangeByIndex(row, i + 1).setText(values[i].toString());
+        }
+        row++;
       }
     } else {
-      goalsSheet.appendRow(['No goals found']);
+      goalsSheet.getRangeByIndex(row, 1).setText('No goals found');
     }
-    final breaksSheet = excel['Breaks'] as dynamic;
+    // Breaks
+    final breaksSheet = workbook.worksheets.addWithName('Breaks');
     final breaks = exportData['breaks'] as List<dynamic>;
+    row = 1;
     if (breaks.isNotEmpty) {
-      breaksSheet.appendRow(
-        breaks.first.keys.map((e) => e.toString()).toList(),
-      );
+      final headers = breaks.first.keys.toList();
+      for (int i = 0; i < headers.length; i++) {
+        breaksSheet.getRangeByIndex(row, i + 1).setText(headers[i].toString());
+      }
+      row++;
       for (final brk in breaks) {
-        breaksSheet.appendRow(brk.values.map((e) => e.toString()).toList());
+        final values = brk.values.toList();
+        for (int i = 0; i < values.length; i++) {
+          breaksSheet.getRangeByIndex(row, i + 1).setText(values[i].toString());
+        }
+        row++;
       }
     } else {
-      breaksSheet.appendRow(['No breaks found']);
+      breaksSheet.getRangeByIndex(row, 1).setText('No breaks found');
     }
-    final settingsSheet = excel['Settings'] as dynamic;
+    // Settings
+    final settingsSheet = workbook.worksheets.addWithName('Settings');
     final settings = exportData['settings'] as Map<String, dynamic>;
-    settingsSheet.appendRow(['Setting', 'Value']);
+    settingsSheet.getRangeByIndex(1, 1).setText('Setting');
+    settingsSheet.getRangeByIndex(1, 2).setText('Value');
+    row = 2;
     settings.forEach((key, value) {
-      settingsSheet.appendRow([key.toString(), value.toString()]);
+      settingsSheet.getRangeByIndex(row, 1).setText(key.toString());
+      settingsSheet.getRangeByIndex(row, 2).setText(value.toString());
+      row++;
     });
-    final profileSheet = excel['Profile'] as dynamic;
+    // Profile
+    final profileSheet = workbook.worksheets.addWithName('Profile');
+    profileSheet.getRangeByIndex(1, 1).setText('Field');
+    profileSheet.getRangeByIndex(1, 2).setText('Value');
+    row = 2;
     final profile = exportData['profile'] as Map<String, dynamic>;
-    profileSheet.appendRow(['Field', 'Value']);
     profile.forEach((key, value) {
-      profileSheet.appendRow([key.toString(), value.toString()]);
+      profileSheet.getRangeByIndex(row, 1).setText(key.toString());
+      profileSheet.getRangeByIndex(row, 2).setText(value.toString());
+      row++;
     });
-    final bytes = excel.encode();
+    // Save file
+    final List<int> bytes = workbook.saveAsStream();
+    workbook.dispose();
     final dir = await getApplicationDocumentsDirectory();
     final file = File(
       '${dir.path}/hourmate_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
     );
-    await file.writeAsBytes(bytes!);
+    await file.writeAsBytes(bytes, flush: true);
+    // Share file
     await Share.shareXFiles([XFile(file.path)], text: 'HourMate Data Export');
   }
 
@@ -500,13 +593,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                     subtitle: 'Your work journey',
                     showBackButton: widget.showBackButton,
                     leading: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          width: 3,
-                        ),
-                      ),
+                      decoration: BoxDecoration(shape: BoxShape.circle),
                       child: CircleAvatar(
                         radius: 32,
                         backgroundColor: AppTheme.neonYellowGreen,
