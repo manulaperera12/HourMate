@@ -275,6 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         activeWorkEntry: state.activeWorkEntry,
                         onClockIn: _showClockInModal,
                         onClockOut: _showClockOutModal,
+                        isOnBreak: state.isOnBreak,
                       ),
                     ),
                     if (state.activeWorkEntry != null)
@@ -335,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const EndBreak(),
                               );
                             },
+                            isSessionActive: state.activeWorkEntry != null,
                           );
                         },
                       ),

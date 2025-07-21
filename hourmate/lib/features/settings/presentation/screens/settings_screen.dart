@@ -19,6 +19,8 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import '../../../onboarding/presentation/screens/get_started_screen.dart';
 import '../../../home/domain/usecases/get_work_entries_usecase.dart';
+import 'package:restart_app/restart_app.dart';
+import '../../../../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool showBackButton;
@@ -825,21 +827,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await _loadSettings();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('App reset. Restarting...'),
+                  content: Text('App reset. Please restart the app.'),
                   backgroundColor: AppTheme.neonYellowGreen,
                 ),
               );
-              // Restart to get started screen
-              Future.delayed(const Duration(milliseconds: 800), () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => GetStartedScreen(
-                      getWorkEntriesUseCase: widget.getWorkEntriesUseCase,
-                    ),
-                  ),
-                  (route) => false,
-                );
-              });
             },
             child: Text('Reset', style: TextStyle(color: AppTheme.errorColor)),
           ),

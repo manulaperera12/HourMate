@@ -226,53 +226,56 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 24, right: 24, bottom: 18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.bottomNavBg,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.13),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.transparent,
-              selectedItemColor: AppTheme.bottomNavSelected,
-              unselectedItemColor: AppTheme.bottomNavUnselected.withValues(
-                alpha: 0.7,
-              ),
-              selectedFontSize: 13,
-              unselectedFontSize: 13,
-              iconSize: 28,
-              elevation: 0,
-              currentIndex: _selectedIndex,
-              onTap: _onTabTapped,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.history_rounded),
-                  label: 'Log',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_rounded),
-                  label: 'Summary',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.settings_rounded),
-                  label: 'Settings',
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.bottomNavBg,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.13),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.transparent,
+                selectedItemColor: AppTheme.bottomNavSelected,
+                unselectedItemColor: AppTheme.bottomNavUnselected.withOpacity(
+                  0.7,
+                ),
+                selectedFontSize: 13,
+                unselectedFontSize: 13,
+                iconSize: 28,
+                elevation: 0,
+                currentIndex: _selectedIndex,
+                onTap: _onTabTapped,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home_rounded),
+                    label: 'Home',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.history_rounded),
+                    label: 'Log',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.bar_chart_rounded),
+                    label: 'Summary',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings_rounded),
+                    label: 'Settings',
+                  ),
+                ],
+              ),
             ),
           ),
         ),

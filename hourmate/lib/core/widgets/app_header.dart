@@ -31,7 +31,7 @@ class AppHeader extends StatefulWidget {
 }
 
 class _AppHeaderState extends State<AppHeader> {
-  String _userAvatar = 'HM';
+  String _userAvatar = '';
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class _AppHeaderState extends State<AppHeader> {
   Future<void> _loadUserAvatar() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final avatar = prefs.getString('user_avatar') ?? 'HM';
+      final avatar = prefs.getString('user_avatar') ?? '';
       if (mounted) {
         setState(() {
           _userAvatar = avatar;

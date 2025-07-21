@@ -10,6 +10,7 @@ class BreakTimerCard extends StatelessWidget {
   final ValueChanged<int> onDurationChanged;
   final VoidCallback onStartBreak;
   final VoidCallback onEndBreak;
+  final bool isSessionActive; // NEW
 
   const BreakTimerCard({
     super.key,
@@ -21,6 +22,7 @@ class BreakTimerCard extends StatelessWidget {
     required this.onDurationChanged,
     required this.onStartBreak,
     required this.onEndBreak,
+    required this.isSessionActive, // NEW
   });
 
   String _formatDuration(int totalSeconds) {
@@ -109,13 +111,17 @@ class BreakTimerCard extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.neonYellowGreen,
+              backgroundColor: isSessionActive
+                  ? AppTheme.disabledTextColor
+                  : AppTheme.neonYellowGreen,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed: onStartBreak,
+            onPressed: isSessionActive
+                ? null
+                : onStartBreak, // DISABLE if session is active
             child: const Text(
               'Start Break',
               style: TextStyle(

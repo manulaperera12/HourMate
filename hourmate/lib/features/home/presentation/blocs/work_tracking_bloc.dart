@@ -314,11 +314,6 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       if (await SettingsService.getVibrationEnabled() && hasVibrator == true) {
         Vibration.vibrate(duration: 50);
       }
-      // Sound feedback on clock in
-      if (await SettingsService.getSoundEnabled()) {
-        await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('sounds/beep.mp3'));
-      }
       // Start timer to update active work entry
       _startTimer();
 
@@ -588,10 +583,10 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
         breakRemainingSeconds: 0,
       ),
     );
-    if (event.autoEnded) {
-      final sound = await SettingsService.getBreakEndSound();
-      await _audioPlayer.play(AssetSource('sounds/$sound'));
-    }
+    // Stop audio before playing break end sound
+    final sound = await SettingsService.getBreakEndSound();
+    await _audioPlayer.stop();
+    await _audioPlayer.play(AssetSource('sounds/$sound'));
   }
 
   Future<void> _onRestoreBreak(
