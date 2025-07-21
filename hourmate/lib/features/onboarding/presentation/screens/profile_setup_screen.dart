@@ -15,7 +15,6 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _positionController = TextEditingController();
   final _companyController = TextEditingController();
 
@@ -46,7 +45,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _positionController.dispose();
     _companyController.dispose();
     super.dispose();
@@ -64,7 +62,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       // Save user profile data
       await prefs.setString('user_name', _nameController.text.trim());
-      await prefs.setString('user_email', _emailController.text.trim());
       await prefs.setString('user_position', _positionController.text.trim());
       await prefs.setString('user_company', _companyController.text.trim());
       await prefs.setString(
@@ -289,27 +286,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         const SizedBox(height: 20),
 
                         _buildTextField(
-                          controller: _emailController,
-                          label: 'Email',
-                          hint: 'Enter your email address',
-                          icon: Icons.email_rounded,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            ).hasMatch(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        _buildTextField(
                           controller: _positionController,
                           label: 'Position',
                           hint: 'e.g., Senior Developer, Designer',
@@ -327,12 +303,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         _buildTextField(
                           controller: _companyController,
                           label: 'Company',
-                          hint: 'Enter your company name',
+                          hint: 'Enter your company name (optional)',
                           icon: Icons.business_rounded,
                           validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your company';
-                            }
                             return null;
                           },
                         ),

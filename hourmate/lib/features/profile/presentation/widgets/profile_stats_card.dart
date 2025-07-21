@@ -46,7 +46,15 @@ class ProfileStatsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            value,
+            (() {
+              final parsed = num.tryParse(value);
+              if (parsed != null) {
+                return parsed % 1 == 0
+                    ? parsed.toStringAsFixed(0)
+                    : parsed.toStringAsFixed(1);
+              }
+              return value;
+            })(),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: AppTheme.primaryTextColor,

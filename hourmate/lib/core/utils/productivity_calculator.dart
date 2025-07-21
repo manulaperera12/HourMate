@@ -216,7 +216,6 @@ class ProductivityCalculator {
       entries,
       dailyGoal,
     );
-    final timeWeightedScore = calculateTimeWeightedProductivity(entries);
     final consistencyScore = calculateConsistencyProductivity(entries);
     final peakHoursScore = calculatePeakHoursProductivity(entries);
     final trendScore = calculateTrendProductivity(entries);
@@ -294,4 +293,3 @@ class ProductivityCalculator {
     };
   }
 }
- 

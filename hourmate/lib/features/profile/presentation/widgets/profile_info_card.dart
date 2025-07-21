@@ -9,49 +9,42 @@ class ProfileInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(20),
-        gradient: RadialGradient(
-          center: Alignment.center,
-          radius: 1.0,
-          colors: [
-            const Color(0xFF2C2C2C),
-            const Color(0xFF1A1A1A).withValues(alpha: 0.5),
-            const Color(0xFF0D0D0D).withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Name and Position
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      userData['name'],
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryTextColor,
-                            fontSize: 24,
-                          ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userData['name'] ?? '',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppTheme.primaryTextColor,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      userData['position'],
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.neonYellowGreen,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    userData['position'] ?? '',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.neonYellowGreen,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               Container(
                 decoration: BoxDecoration(
@@ -65,7 +58,7 @@ class ProfileInfoCard extends StatelessWidget {
                   radius: 40,
                   backgroundColor: AppTheme.neonYellowGreen,
                   child: Text(
-                    userData['avatar'],
+                    (userData['avatar'] ?? '').toString(),
                     style: const TextStyle(
                       color: AppTheme.black,
                       fontWeight: FontWeight.bold,
@@ -83,21 +76,15 @@ class ProfileInfoCard extends StatelessWidget {
           _buildInfoRow(
             Icons.business_rounded,
             'Company',
-            userData['company'],
+            userData['company'] ?? '',
             AppTheme.cyanBlue,
           ),
           const SizedBox(height: 12),
-          _buildInfoRow(
-            Icons.email_rounded,
-            'Email',
-            userData['email'],
-            AppTheme.orange,
-          ),
-          const SizedBox(height: 12),
+          // Email row removed
           _buildInfoRow(
             Icons.calendar_today_rounded,
             'Member since',
-            userData['joinDate'],
+            userData['joinDate'] ?? '',
             AppTheme.neonYellowGreen,
           ),
         ],

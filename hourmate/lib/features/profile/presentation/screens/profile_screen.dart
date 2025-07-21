@@ -15,6 +15,8 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import '../../../home/data/datasources/work_entry_local_datasource.dart';
 import '../../../../core/services/settings_service.dart';
+import '../../../../main.dart';
+import '../widgets/level_up_popup.dart';
 
 class ProfileScreen extends StatelessWidget {
   final bool showBackButton;
@@ -73,9 +75,8 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     final prefs = await SharedPreferences.getInstance();
     return {
       'name': prefs.getString('user_name') ?? 'User',
-      'email': prefs.getString('user_email') ?? 'user@email.com',
       'position': prefs.getString('user_position') ?? 'Professional',
-      'company': prefs.getString('user_company') ?? 'Company',
+      'company': prefs.getString('user_company') ?? '',
       'avatar': prefs.getString('user_avatar') ?? 'U',
       'joinDate': prefs.getString('join_date'),
       'totalHours': prefs.getDouble('total_hours') ?? 0.0,
@@ -154,22 +155,86 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
+      final dataSource = WorkEntryLocalDataSource();
+      final entries = (await dataSource.getAllWorkEntries())
+          .map((e) => e.toEntity())
+          .toList();
+      // Only completed entries
+      final completed = entries.where((e) => !e.isActive).toList();
+      // Total hours
+      final totalHours = completed.fold<double>(
+        0.0,
+        (sum, e) => sum + e.durationInHours,
+      );
+      // Total sessions
+      final totalSessions = completed.length;
+      // Average rating (Good=2, Average=1, Bad=0)
+      double avgRating = 0.0;
+      if (completed.isNotEmpty) {
+        final ratingSum = completed.fold<int>(0, (sum, e) {
+          switch (e.taskRating) {
+            case 'Good':
+              return sum + 2;
+            case 'Average':
+              return sum + 1;
+            case 'Bad':
+              return sum + 0;
+            default:
+              return sum;
+          }
+        });
+        avgRating = ratingSum / completed.length;
+      }
+      // Streak calculation
+      final days =
+          completed
+              .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+              .toSet()
+              .toList()
+            ..sort();
+      int streak = 0;
+      int maxStreak = 0;
+      DateTime? prev;
+      for (final d in days) {
+        if (prev == null || d.difference(prev).inDays == 1) {
+          streak++;
+        } else {
+          streak = 1;
+        }
+        if (streak > maxStreak) maxStreak = streak;
+        prev = d;
+      }
+      // Level calculation based on experience (10 XP per session)
+      int experience = totalSessions * 10;
+      int level = (experience / 100).floor() + 1;
+      int nextLevel = level * 100;
+      final prevLevel = prefs.getInt('level') ?? 1;
+      if (level > prevLevel) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (globalNavigatorKey.currentState != null) {
+            showDialog(
+              context: globalNavigatorKey.currentState!.overlay!.context,
+              barrierDismissible: false,
+              builder: (context) => LevelUpPopup(newLevel: level),
+            );
+          }
+        });
+        await prefs.setInt('level', level);
+      }
       setState(() {
         _userData = {
           'name': prefs.getString('user_name') ?? 'User',
-          'email': prefs.getString('user_email') ?? 'user@email.com',
           'position': prefs.getString('user_position') ?? 'Professional',
-          'company': prefs.getString('user_company') ?? 'Company',
+          'company': prefs.getString('user_company') ?? '',
           'avatar': prefs.getString('user_avatar') ?? 'U',
           'joinDate': _formatJoinDate(prefs.getString('join_date')),
-          'totalHours': prefs.getDouble('total_hours') ?? 0.0,
-          'totalSessions': prefs.getInt('total_sessions') ?? 0,
-          'averageRating': prefs.getDouble('average_rating') ?? 0.0,
-          'streakDays': prefs.getInt('streak_days') ?? 0,
-          'level': prefs.getInt('level') ?? 1,
-          'experience': prefs.getInt('experience') ?? 0,
-          'nextLevel': prefs.getInt('next_level') ?? 100,
+          'totalHours': totalHours,
+          'totalSessions': totalSessions,
+          'averageRating': avgRating,
+          'streakDays': maxStreak,
+          'level': level,
+          'experience': experience,
+          'nextLevel': nextLevel,
         };
         _isLoading = false;
       });
@@ -177,9 +242,8 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
       setState(() {
         _userData = {
           'name': 'User',
-          'email': 'user@email.com',
           'position': 'Professional',
-          'company': 'Company',
+          'company': '',
           'avatar': 'U',
           'joinDate': 'Recently',
           'totalHours': 0.0,
@@ -219,7 +283,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   Future<void> _showEditProfileSheet() async {
     final prefs = await SharedPreferences.getInstance();
     final nameController = TextEditingController(text: _userData['name']);
-    final emailController = TextEditingController(text: _userData['email']);
     final positionController = TextEditingController(
       text: _userData['position'],
     );
@@ -284,14 +347,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
                     controller: positionController,
                     decoration: const InputDecoration(
                       labelText: 'Position',
@@ -322,10 +377,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                         await prefs.setString(
                           'user_name',
                           nameController.text.trim(),
-                        );
-                        await prefs.setString(
-                          'user_email',
-                          emailController.text.trim(),
                         );
                         await prefs.setString(
                           'user_position',
@@ -842,8 +893,40 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                         subtitle: 'Share your achievements',
                         icon: Icons.share_rounded,
                         color: AppTheme.orange,
-                        onTap: () {
-                          // TODO: Share profile functionality
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          final name = prefs.getString('user_name') ?? 'User';
+                          final level = _userData['level'] ?? 1;
+                          final totalHours = _userData['totalHours'] ?? 0;
+                          final totalSessions = _userData['totalSessions'] ?? 0;
+                          final streak = _userData['streakDays'] ?? 0;
+                          final achievements = [
+                            if (prefs.getBool('achievement_early_bird_shown') ??
+                                false)
+                              '🌅 Early Bird',
+                            if (prefs.getBool(
+                                  'achievement_consistency_king_shown',
+                                ) ??
+                                false)
+                              '👑 Consistency King',
+                            if (prefs.getBool(
+                                  'achievement_task_crusher_shown',
+                                ) ??
+                                false)
+                              '💪 Task Crusher',
+                            if (prefs.getBool(
+                                  'achievement_focus_master_shown',
+                                ) ??
+                                false)
+                              '🎯 Focus Master',
+                          ];
+                          final shareText =
+                              '''Check out my HourMate profile!\n\n'
+Name: $name\nLevel: $level\nTotal Hours: $totalHours\nSessions: $totalSessions\nStreak: $streak days\n\nAchievements:\n${achievements.isNotEmpty ? achievements.join(", ") : "No achievements yet"}\n\nJoin me on HourMate!''';
+                          await Share.share(
+                            shareText,
+                            subject: 'My HourMate Profile',
+                          );
                         },
                       ),
                       const SizedBox(height: 40),
