@@ -13,6 +13,10 @@ import '../../../profile/presentation/blocs/achievements_cubit.dart';
 import '../../../profile/data/repositories/achievement_repository.dart';
 import 'package:vibration/vibration.dart';
 import '../../data/datasources/work_entry_local_datasource.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../profile/presentation/widgets/level_up_popup.dart';
+import '../../../../main.dart';
+import '../../../profile/presentation/widgets/achievement_unlocked_popup.dart';
 
 // Events
 abstract class WorkTrackingEvent extends Equatable {
@@ -215,9 +219,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     emit(WorkTrackingLoading());
     try {
       final List<WorkEntry> workEntries = await getWorkEntriesUseCase();
-      // Defensive: ensure workEntries is a List<WorkEntry>
       if (workEntries is! List<WorkEntry>) {
-        debugPrint('Corrupted workEntries: $workEntries');
         await WorkEntryLocalDataSource.clearCorruptedWorkEntries();
         emit(
           const WorkTrackingError(
@@ -229,7 +231,6 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       }
       final WorkEntry? activeWorkEntry = await getWorkEntriesUseCase
           .getActiveEntry();
-      // Calculate start of week
       final now = DateTime.now();
       final weekDay = now.weekday;
       final startOfWeek = DateTime(
@@ -240,6 +241,22 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       final weeklySummary = await getWeeklySummaryUseCase(startOfWeek);
       final double dailyGoal = await SettingsService.getDailyGoal();
       final int breakDuration = await SettingsService.getBreakDuration();
+      // Merge break info if a break is active
+      final breakInfo = await SettingsService.getActiveBreak();
+      bool isOnBreak = false;
+      DateTime? breakStartTime;
+      int? breakDurationMinutes;
+      int breakElapsedSeconds = 0;
+      int breakRemainingSeconds = 0;
+      if (breakInfo != null) {
+        isOnBreak = true;
+        breakStartTime = breakInfo['start'] as DateTime;
+        breakDurationMinutes = breakInfo['duration'] as int;
+        final elapsed = now.difference(breakStartTime).inSeconds;
+        final total = breakDurationMinutes * 60;
+        breakElapsedSeconds = elapsed;
+        breakRemainingSeconds = total - elapsed;
+      }
       emit(
         WorkTrackingLoaded(
           workEntries: workEntries,
@@ -248,6 +265,10 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           dailyHours: weeklySummary.dailyHours,
           dailyGoal: dailyGoal,
           breakDurationMinutes: breakDuration,
+          isOnBreak: isOnBreak,
+          breakStartTime: breakStartTime,
+          breakElapsedSeconds: breakElapsedSeconds,
+          breakRemainingSeconds: breakRemainingSeconds,
         ),
       );
     } catch (e) {
@@ -341,6 +362,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           unlocked: true,
           progress: 1.0,
         );
+        await showAchievementPopupIfNeeded('early_bird', 'Early Bird');
       }
       // Consistency King: 30-day streak
       final allEntries = await getWorkEntriesUseCase();
@@ -350,6 +372,10 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           'consistency_king',
           unlocked: true,
           progress: 1.0,
+        );
+        await showAchievementPopupIfNeeded(
+          'consistency_king',
+          'Consistency King',
         );
       } else {
         await AchievementRepository.updateAchievementGlobal(
@@ -373,6 +399,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           unlocked: true,
           progress: 1.0,
         );
+        await showAchievementPopupIfNeeded('task_crusher', 'Task Crusher');
       } else {
         await AchievementRepository.updateAchievementGlobal(
           'task_crusher',
@@ -397,6 +424,7 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           unlocked: true,
           progress: 1.0,
         );
+        await showAchievementPopupIfNeeded('focus_master', 'Focus Master');
       } else {
         final progress = focusEntries.isEmpty
             ? 0.0
@@ -405,6 +433,31 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           'focus_master',
           progress: progress,
         );
+      }
+      // After achievements and before emitting loading state
+      // Level-up detection
+      final dataSource = WorkEntryLocalDataSource();
+      final entries = (await dataSource.getAllWorkEntries())
+          .map((e) => e.toEntity())
+          .toList();
+      final completed = entries.where((e) => !e.isActive).toList();
+      final totalSessions = completed.length;
+      int experience = totalSessions * 10;
+      int level = (experience / 100).floor() + 1;
+      final prefs = await SharedPreferences.getInstance();
+      int prevLevel = prefs.getInt('level') ?? 1;
+      if (level > prevLevel) {
+        // Show popup globally
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (globalNavigatorKey.currentState != null) {
+            showDialog(
+              context: globalNavigatorKey.currentState!.overlay!.context,
+              barrierDismissible: false,
+              builder: (context) => LevelUpPopup(newLevel: level),
+            );
+          }
+        });
+        await prefs.setInt('level', level);
       }
       // Emit loading state before reloading entries to force HomeScreen rebuild
       emit(WorkTrackingLoading());
@@ -461,9 +514,6 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     // Defensive: Only start a break if not already on break
     if (state is WorkTrackingLoaded &&
         (state as WorkTrackingLoaded).isOnBreak) {
-      print(
-        'Attempted to start a break, but one is already running. Ignoring.',
-      );
       return;
     }
     final now = DateTime.now();
@@ -549,7 +599,6 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     Emitter<WorkTrackingState> emit,
   ) async {
     final breakInfo = await SettingsService.getActiveBreak();
-    print('Restoring break: ' + breakInfo.toString());
     if (breakInfo != null) {
       final start = breakInfo['start'] as DateTime;
       final duration = breakInfo['duration'] as int;
@@ -557,18 +606,6 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
       final elapsed = now.difference(start).inSeconds;
       final total = duration * 60;
       final remaining = total - elapsed;
-      print(
-        'Break start: ' +
-            start.toString() +
-            ', duration: ' +
-            duration.toString() +
-            ', now: ' +
-            now.toString() +
-            ', elapsed: ' +
-            elapsed.toString() +
-            ', remaining: ' +
-            remaining.toString(),
-      );
       if (remaining > 0) {
         _startBreakTimer(
           start,
@@ -577,18 +614,9 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
           elapsedSeconds: elapsed,
           remainingSeconds: remaining,
         );
-        emit(
-          _currentLoadedState().copyWith(
-            breakElapsedSeconds: elapsed,
-            breakRemainingSeconds: remaining,
-          ),
-        );
       } else {
-        print('Break ended automatically on restore');
         add(const EndBreak(autoEnded: true));
       }
-    } else {
-      print('No active break found in storage');
     }
   }
 
@@ -631,5 +659,26 @@ class WorkTrackingBloc extends Bloc<WorkTrackingEvent, WorkTrackingState> {
     _stopTimer();
     _breakTimer?.cancel();
     return super.close();
+  }
+}
+
+Future<void> showAchievementPopupIfNeeded(
+  String key,
+  String displayName,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+  final shownKey = 'achievement_${key}_shown';
+  if (!(prefs.getBool(shownKey) ?? false)) {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (globalNavigatorKey.currentState != null) {
+        showDialog(
+          context: globalNavigatorKey.currentState!.overlay!.context,
+          barrierDismissible: false,
+          builder: (context) =>
+              AchievementUnlockedPopup(achievementName: displayName),
+        );
+      }
+    });
+    await prefs.setBool(shownKey, true);
   }
 }

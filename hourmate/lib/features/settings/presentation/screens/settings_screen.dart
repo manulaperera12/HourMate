@@ -249,11 +249,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           '5 days',
                                           style: TextStyle(
                                             color: !_useSevenDays
-                                                ? AppTheme.primaryTextColor
+                                                ? Colors.black
                                                 : AppTheme.disabledTextColor,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                        checkmarkColor: Colors.black,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
                                             10,
@@ -270,13 +271,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             setState(
                                               () => _useSevenDays = false,
                                             );
+                                            final bloc = context
+                                                .read<WorkTrackingBloc>();
                                             await SettingsService.setWeeklyGoalDays(
                                               5,
                                             );
-                                            if (mounted)
-                                              context
-                                                  .read<WorkTrackingBloc>()
-                                                  .add(LoadWorkEntries());
+                                            if (mounted) {
+                                              bloc.add(LoadWorkEntries());
+                                            }
                                             await _loadSettings();
                                           }
                                         },
@@ -287,11 +289,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           '7 days',
                                           style: TextStyle(
                                             color: _useSevenDays
-                                                ? AppTheme.primaryTextColor
+                                                ? Colors.black
                                                 : AppTheme.disabledTextColor,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
+                                        checkmarkColor: Colors.black,
                                         selected: _useSevenDays,
                                         selectedColor: AppTheme.neonYellowGreen,
                                         backgroundColor: AppTheme.cardColor,
@@ -308,13 +311,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             setState(
                                               () => _useSevenDays = true,
                                             );
+                                            final bloc = context
+                                                .read<WorkTrackingBloc>();
                                             await SettingsService.setWeeklyGoalDays(
                                               7,
                                             );
-                                            if (mounted)
-                                              context
-                                                  .read<WorkTrackingBloc>()
-                                                  .add(LoadWorkEntries());
+                                            if (mounted) {
+                                              bloc.add(LoadWorkEntries());
+                                            }
                                             await _loadSettings();
                                           }
                                         },
@@ -377,6 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               );
                             },
                           ),
+                          const SizedBox(height: 12),
                         ],
                       ),
 
@@ -410,6 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               await SettingsService.setVibrationEnabled(value);
                             },
                           ),
+                          const SizedBox(height: 12),
                         ],
                       ),
 
@@ -417,7 +423,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       // Data & Privacy
                       SettingsSection(
-                        title: 'Data & Privacy',
+                        title: 'Data',
                         icon: Icons.security_rounded,
                         color: AppTheme.neonYellowGreen,
                         children: [
@@ -537,14 +543,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               );
                             },
                           ),
-                          SettingsTile(
-                            title: 'Privacy Policy',
-                            subtitle: 'Read our privacy policy',
-                            icon: Icons.privacy_tip_rounded,
-                            onTap: () {
-                              // TODO: Show privacy policy
-                            },
-                          ),
+                          const SizedBox(height: 12),
                         ],
                       ),
 
@@ -562,14 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             icon: Icons.app_settings_alt_rounded,
                             onTap: null,
                           ),
-                          SettingsTile(
-                            title: 'Terms of Service',
-                            subtitle: 'Read our terms',
-                            icon: Icons.description_rounded,
-                            onTap: () {
-                              // TODO: Show terms of service
-                            },
-                          ),
+                          const SizedBox(height: 12),
                         ],
                       ),
 
@@ -896,9 +888,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     return {
       'name': prefs.getString('user_name') ?? 'User',
-      'email': prefs.getString('user_email') ?? 'user@email.com',
       'position': prefs.getString('user_position') ?? 'Professional',
-      'company': prefs.getString('user_company') ?? 'Company',
+      'company': prefs.getString('user_company') ?? '',
       'avatar': prefs.getString('user_avatar') ?? 'U',
       'joinDate': prefs.getString('join_date'),
       'totalHours': prefs.getDouble('total_hours') ?? 0.0,

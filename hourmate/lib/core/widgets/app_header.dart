@@ -64,7 +64,7 @@ class _AppHeaderState extends State<AppHeader> {
         boxShadow: widget.showShadow
             ? [
                 BoxShadow(
-                  color: AppTheme.backgroundColor.withValues(alpha: 0.08),
+                  color: AppTheme.neonYellowGreen.withValues(alpha: 0.1),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),

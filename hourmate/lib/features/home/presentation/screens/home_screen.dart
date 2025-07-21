@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
   bool _showDateFilter = false;
+  bool _restoredBreak = false;
 
   // Mock week progress data
   final List<DayProgress> _mockWeekProgress = [
@@ -83,6 +84,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<WorkTrackingBloc>().add(LoadWorkEntries());
       context.read<WorkTrackingBloc>().add(RestoreBreak());
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_restoredBreak) {
+      context.read<WorkTrackingBloc>().add(RestoreBreak());
+      _restoredBreak = true;
+    }
   }
 
   Future<void> _loadCustomGoals() async {
@@ -201,11 +211,12 @@ class _HomeScreenState extends State<HomeScreen> {
               // No SnackBar for WorkTrackingError
             },
             builder: (context, state) {
-              if (state is WorkTrackingError) {
-                // Show a loading indicator or fallback UI instead of error
+              // Show loading indicator until WorkTrackingLoaded is available
+              if (state is! WorkTrackingLoaded) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (state is! WorkTrackingLoaded) {
+              if (state is WorkTrackingError) {
+                // Show a loading indicator or fallback UI instead of error
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -310,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             },
                             onStartBreak: () {
-                              if (!(state.isOnBreak ?? false)) {
+                              if (!state.isOnBreak) {
                                 context.read<WorkTrackingBloc>().add(
                                   StartBreak(
                                     durationMinutes:
@@ -362,7 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
             entry.date.month == today.month &&
             entry.date.day == today.day;
       } catch (e) {
-        debugPrint('Error in todayEntries filter: $e');
         return false;
       }
     }).toList();
@@ -376,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : entry.durationInHours;
         }
       } catch (e) {
-        debugPrint('Error summing totalHours: $e');
+        continue;
       }
     }
 
@@ -452,7 +462,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? (entry.durationInHours as int).toDouble()
                             : entry.durationInHours);
                   } catch (e) {
-                    debugPrint('Error in weekProgress fold: $e');
                     return sum;
                   }
                 });
@@ -483,7 +492,6 @@ class _HomeScreenState extends State<HomeScreen> {
               try {
                 return sum + (entry.durationInMinutes as num).toInt();
               } catch (e) {
-                debugPrint('Error in workedDuration fold: $e');
                 return sum;
               }
             }),

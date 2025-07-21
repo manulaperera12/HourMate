@@ -227,10 +227,7 @@ class _WorkLogScreenState extends State<WorkLogScreen> {
                             ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               itemCount: filteredEntries.length,
                               itemBuilder: (context, index) {
                                 final entry = filteredEntries[index];

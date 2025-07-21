@@ -17,6 +17,9 @@ import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/onboarding/presentation/screens/get_started_screen.dart';
 import 'features/profile/presentation/blocs/achievements_cubit.dart';
 
+final GlobalKey<NavigatorState> globalNavigatorKey =
+    GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -72,6 +75,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: globalNavigatorKey,
         title: 'HourMate',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
