@@ -916,179 +916,188 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : AppTheme.surfaceColor.withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: Icon(
-                                            goal['completed'] == true
-                                                ? Icons.check_circle
-                                                : Icons.radio_button_unchecked,
-                                            color: goal['completed'] == true
-                                                ? AppTheme.neonYellowGreen
-                                                : AppTheme.disabledTextColor,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10.0,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                              goal['completed'] == true
+                                                  ? Icons.check_circle
+                                                  : Icons
+                                                        .radio_button_unchecked,
+                                              color: goal['completed'] == true
+                                                  ? AppTheme.neonYellowGreen
+                                                  : AppTheme.disabledTextColor,
+                                            ),
+                                            onPressed: () async {
+                                              await SettingsService.updateCustomGoal(
+                                                i,
+                                                completed:
+                                                    !(goal['completed'] ==
+                                                        true),
+                                              );
+                                              await _loadCustomGoals();
+                                              setState(() {});
+                                            },
                                           ),
-                                          onPressed: () async {
-                                            await SettingsService.updateCustomGoal(
-                                              i,
-                                              completed:
-                                                  !(goal['completed'] == true),
-                                            );
-                                            await _loadCustomGoals();
-                                            setState(() {});
-                                          },
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                goal['title'] ?? '',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyLarge
-                                                    ?.copyWith(
-                                                      decoration:
-                                                          goal['completed'] ==
-                                                              true
-                                                          ? TextDecoration
-                                                                .lineThrough
-                                                          : null,
-                                                      color: AppTheme
-                                                          .primaryTextColor,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                              ),
-                                              if (startDate != null ||
-                                                  endDate != null)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 4,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  goal['title'] ?? '',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge
+                                                      ?.copyWith(
+                                                        decoration:
+                                                            TextDecoration.none,
+                                                        color: AppTheme
+                                                            .primaryTextColor,
+                                                        fontWeight:
+                                                            FontWeight.w500,
                                                       ),
-                                                  child: Row(
-                                                    children: [
-                                                      if (startDate !=
-                                                          null) ...[
-                                                        Icon(
-                                                          Icons.calendar_today,
-                                                          size: 12,
-                                                          color: AppTheme
-                                                              .secondaryTextColor,
+                                                ),
+                                                if (startDate != null ||
+                                                    endDate != null)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 4,
                                                         ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          DateFormat(
-                                                            'MMM dd',
-                                                          ).format(startDate!),
-                                                          style: TextStyle(
-                                                            fontSize: 12,
+                                                    child: Row(
+                                                      children: [
+                                                        if (startDate !=
+                                                            null) ...[
+                                                          Icon(
+                                                            Icons
+                                                                .calendar_today,
+                                                            size: 12,
                                                             color: AppTheme
                                                                 .secondaryTextColor,
                                                           ),
-                                                        ),
-                                                      ],
-                                                      if (startDate != null &&
-                                                          endDate != null)
-                                                        Padding(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 4,
-                                                              ),
-                                                          child: Text(
-                                                            '→',
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Text(
+                                                            DateFormat(
+                                                              'MMM dd',
+                                                            ).format(
+                                                              startDate!,
+                                                            ),
                                                             style: TextStyle(
                                                               fontSize: 12,
                                                               color: AppTheme
                                                                   .secondaryTextColor,
                                                             ),
                                                           ),
-                                                        ),
-                                                      if (endDate != null) ...[
-                                                        Icon(
-                                                          Icons.event,
-                                                          size: 12,
-                                                          color: AppTheme
-                                                              .secondaryTextColor,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          DateFormat(
-                                                            'MMM dd',
-                                                          ).format(endDate!),
-                                                          style: TextStyle(
-                                                            fontSize: 12,
+                                                        ],
+                                                        if (startDate != null &&
+                                                            endDate != null)
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 4,
+                                                                ),
+                                                            child: Text(
+                                                              '→',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: AppTheme
+                                                                    .secondaryTextColor,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        if (endDate !=
+                                                            null) ...[
+                                                          Icon(
+                                                            Icons.event,
+                                                            size: 12,
                                                             color: AppTheme
                                                                 .secondaryTextColor,
                                                           ),
-                                                        ),
+                                                          const SizedBox(
+                                                            width: 4,
+                                                          ),
+                                                          Text(
+                                                            DateFormat(
+                                                              'MMM dd',
+                                                            ).format(endDate!),
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: AppTheme
+                                                                  .secondaryTextColor,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ],
-                                                    ],
+                                                    ),
                                                   ),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuButton<String>(
+                                            icon: const Icon(
+                                              Icons.more_vert,
+                                              color:
+                                                  AppTheme.secondaryTextColor,
+                                            ),
+                                            onSelected: (value) async {
+                                              if (value == 'edit') {
+                                                _showEditGoalModal(
+                                                  context,
+                                                  i,
+                                                  goal,
+                                                );
+                                              } else if (value == 'delete') {
+                                                await SettingsService.removeCustomGoal(
+                                                  i,
+                                                );
+                                                await _loadCustomGoals();
+                                                setState(() {});
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.edit,
+                                                      color: AppTheme
+                                                          .neonYellowGreen,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit'),
+                                                  ],
                                                 ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.delete,
+                                                      color:
+                                                          AppTheme.errorColor,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text('Delete'),
+                                                  ],
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                        ),
-                                        PopupMenuButton<String>(
-                                          icon: const Icon(
-                                            Icons.more_vert,
-                                            color: AppTheme.secondaryTextColor,
-                                          ),
-                                          onSelected: (value) async {
-                                            if (value == 'edit') {
-                                              _showEditGoalModal(
-                                                context,
-                                                i,
-                                                goal,
-                                              );
-                                            } else if (value == 'delete') {
-                                              await SettingsService.removeCustomGoal(
-                                                i,
-                                              );
-                                              await _loadCustomGoals();
-                                              setState(() {});
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'edit',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.edit,
-                                                    color: AppTheme
-                                                        .neonYellowGreen,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text('Edit'),
-                                                ],
-                                              ),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.delete,
-                                                    color: AppTheme.errorColor,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text('Delete'),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }),

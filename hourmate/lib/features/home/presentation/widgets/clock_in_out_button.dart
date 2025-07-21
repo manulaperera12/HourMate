@@ -82,18 +82,8 @@ class _ClockInOutButtonState extends State<ClockInOutButton> {
                     horizontal: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.cardColor,
+                    color: AppTheme.tabBarBg.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(20),
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.0,
-                      colors: [
-                        const Color(0xFF2C2C2C),
-                        const Color(0xFF1A1A1A).withValues(alpha: 0.5),
-                        const Color(0xFF0D0D0D).withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

@@ -8,6 +8,7 @@ import '../../../home/data/models/work_entry_model.dart';
 import 'weekly_summary_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
+import 'dart:math';
 
 enum SummaryFilter { workHours, tasks, productivity }
 
@@ -40,12 +41,23 @@ class _SummaryScreenState extends State<SummaryScreen> {
     setState(() => _loading = true);
     final dataSource = WorkEntryLocalDataSource();
     final allEntries = await dataSource.getAllEntries();
+    final start = DateTime(
+      _selectedWeekStart.year,
+      _selectedWeekStart.month,
+      _selectedWeekStart.day,
+    );
+    final end = start.add(const Duration(days: 6));
     final weekEntries = allEntries.where((entry) {
-      final start = _selectedWeekStart;
-      final end = start.add(const Duration(days: 7));
-      return entry.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
-          entry.date.isBefore(end);
+      final entryDate = DateTime(
+        entry.date.year,
+        entry.date.month,
+        entry.date.day,
+      );
+      return !entryDate.isBefore(start) && !entryDate.isAfter(end);
     }).toList();
+    debugPrint(
+      '#32324 Weekly Summary: Week $start to $end, Entries: ${weekEntries.map((e) => e.toMap()).toList()}',
+    );
     // Aggregate
     double totalHours = 0;
     List<double> dailyHours = List.filled(7, 0);
@@ -333,28 +345,30 @@ class WeeklySummaryContent extends StatelessWidget {
         // Task rating summary
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _RatingChip(
-                label: 'Good',
-                count: ratings['Good'] ?? 0,
-                color: AppTheme.goodRatingColor,
-                icon: Icons.sentiment_satisfied_alt_rounded,
-              ),
-              _RatingChip(
-                label: 'Average',
-                count: ratings['Average'] ?? 0,
-                color: AppTheme.averageRatingColor,
-                icon: Icons.sentiment_neutral_rounded,
-              ),
-              _RatingChip(
-                label: 'Bad',
-                count: ratings['Bad'] ?? 0,
-                color: AppTheme.badRatingColor,
-                icon: Icons.sentiment_dissatisfied_rounded,
-              ),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _RatingChip(
+                  label: 'Good',
+                  count: ratings['Good'] ?? 0,
+                  color: AppTheme.goodRatingColor,
+                  icon: Icons.sentiment_satisfied_alt_rounded,
+                ),
+                _RatingChip(
+                  label: 'Average',
+                  count: ratings['Average'] ?? 0,
+                  color: AppTheme.averageRatingColor,
+                  icon: Icons.sentiment_neutral_rounded,
+                ),
+                _RatingChip(
+                  label: 'Bad',
+                  count: ratings['Bad'] ?? 0,
+                  color: AppTheme.badRatingColor,
+                  icon: Icons.sentiment_dissatisfied_rounded,
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -381,6 +395,7 @@ class _RatingChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+      margin: const EdgeInsets.only(right: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(16),
@@ -520,10 +535,6 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
       '22',
       '23',
     ];
-    final double maxY = _selectedFilter == SummaryFilter.productivity
-        ? 100
-        : 10;
-
     List<double> getCurrentDaily() {
       switch (_selectedFilter) {
         case SummaryFilter.tasks:
@@ -534,6 +545,13 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
           return dailyHours;
       }
     }
+
+    final List<double> currentDaily = getCurrentDaily();
+    final double maxY = _selectedFilter == SummaryFilter.productivity
+        ? 100
+        : (currentDaily.isNotEmpty
+              ? max(10, currentDaily.reduce(max) + 2)
+              : 10);
 
     List<double> getCurrentHourly() {
       switch (_selectedFilter) {
@@ -565,13 +583,6 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
             stops: const [0.0, 0.5, 1.0], // Control where each color stops
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.neonYellowGreen.withValues(alpha: 0.10),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -688,7 +699,10 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                                 }
                               } else {
                                 int idx = value.toInt();
-                                if (idx % 2 == 0 && idx ~/ 2 < hours.length) {
+                                // Only show even hour labels for clarity, and prevent duplicate sets
+                                if (idx % 2 == 0 &&
+                                    idx >= 0 &&
+                                    idx < hours.length) {
                                   return Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text(
@@ -843,59 +857,34 @@ class _SummaryChartViewState extends State<_SummaryChartView> {
                 ),
               ),
               const SizedBox(height: 8),
-              // X axis labels (scrollable for per-hour)
-              if (!_perDay)
-                SizedBox(
-                  height: 24,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: hours
-                          .map(
-                            (h) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              child: Text(
-                                h,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: AppTheme.secondaryTextColor,
-                                      fontSize: 11,
-                                    ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
               // Filter bar (functional)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _FilterChip(
-                    label: 'Work Hours',
-                    selected: _selectedFilter == SummaryFilter.workHours,
-                    onTap: () => setState(
-                      () => _selectedFilter = SummaryFilter.workHours,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _FilterChip(
+                      label: 'Work Hours',
+                      selected: _selectedFilter == SummaryFilter.workHours,
+                      onTap: () => setState(
+                        () => _selectedFilter = SummaryFilter.workHours,
+                      ),
                     ),
-                  ),
-                  _FilterChip(
-                    label: 'Tasks',
-                    selected: _selectedFilter == SummaryFilter.tasks,
-                    onTap: () =>
-                        setState(() => _selectedFilter = SummaryFilter.tasks),
-                  ),
-                  _FilterChip(
-                    label: 'Productivity',
-                    selected: _selectedFilter == SummaryFilter.productivity,
-                    onTap: () => setState(
-                      () => _selectedFilter = SummaryFilter.productivity,
+                    _FilterChip(
+                      label: 'Tasks',
+                      selected: _selectedFilter == SummaryFilter.tasks,
+                      onTap: () =>
+                          setState(() => _selectedFilter = SummaryFilter.tasks),
                     ),
-                  ),
-                ],
+                    _FilterChip(
+                      label: 'Productivity',
+                      selected: _selectedFilter == SummaryFilter.productivity,
+                      onTap: () => setState(
+                        () => _selectedFilter = SummaryFilter.productivity,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
             ],
